@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.6.2
+ * Version: 1.6.3
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.6.2' );
+define( 'PF_VERSION', '1.6.3' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -947,25 +947,31 @@ function pf_theme_css( $form_id, $theme ) {
 	$input_height = isset( $t['input_height'] ) ? $t['input_height'] : 'normal';
 
 	// Label CSS prema stilu
-	$label_css = match ( $label_style ) {
-		'uppercase' => "font-weight:700 !important;font-size:10px !important;text-transform:uppercase !important;letter-spacing:0.08em !important;",
-		'light'     => "font-weight:400 !important;font-size:13px !important;text-transform:none !important;letter-spacing:0 !important;",
-		default     => "font-weight:600 !important;font-size:14px !important;text-transform:none !important;letter-spacing:0 !important;",
-	};
+	switch ( $label_style ) {
+		case 'uppercase':
+			$label_css = "font-weight:700 !important;font-size:10px !important;text-transform:uppercase !important;letter-spacing:0.08em !important;";
+			break;
+		case 'light':
+			$label_css = "font-weight:400 !important;font-size:13px !important;text-transform:none !important;letter-spacing:0 !important;";
+			break;
+		default: // normal
+			$label_css = "font-weight:600 !important;font-size:14px !important;text-transform:none !important;letter-spacing:0 !important;";
+			break;
+	}
 
 	// Input font-size
-	$input_font_size = match ( $font_size ) {
-		'small'  => '13px',
-		'large'  => '17px',
-		default  => '15px',
-	};
+	switch ( $font_size ) {
+		case 'small':  $input_font_size = '13px'; break;
+		case 'large':  $input_font_size = '17px'; break;
+		default:       $input_font_size = '15px'; break;
+	}
 
 	// Input padding (visina)
-	$input_padding = match ( $input_height ) {
-		'compact'  => '9px 12px',
-		'spacious' => '16px 16px',
-		default    => '12px 14px',
-	};
+	switch ( $input_height ) {
+		case 'compact':  $input_padding = '9px 12px';  break;
+		case 'spacious': $input_padding = '16px 16px'; break;
+		default:         $input_padding = '12px 14px'; break;
+	}
 	$both_sel  = $wrap_sel . ', ' . $id_sel;
 
 	// Scope na ID forme + wrapper (specifičan selector koji bije Elementor)
