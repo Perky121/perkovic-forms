@@ -2913,3 +2913,98 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 	background: #F7F3EF;
 	color: #B5654A;
 }
+
+/* ---- Multi-condition logic UI ---- */
+.pf-cond-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: #2B2420;
+	cursor: pointer;
+	margin-bottom: 12px;
+}
+
+.pf-cond-main {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.pf-cond-match-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: #6B5F58;
+	background: #F7F3EF;
+	padding: 8px 10px;
+	border-radius: 6px;
+}
+
+.pf-cond-match-sel {
+	font-size: 12px;
+	font-weight: 700;
+	border: 1px solid #DDD4C8;
+	border-radius: 4px;
+	padding: 3px 6px;
+	color: #B5654A;
+	background: #fff;
+}
+
+.pf-cond-rules-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.pf-cond-rule-row {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	flex-wrap: wrap;
+}
+
+.pf-cond-rule-row select,
+.pf-cond-rule-row input {
+	font-size: 12px;
+	border: 1px solid #DDD4C8;
+	border-radius: 4px;
+	padding: 5px 7px;
+	background: #fff;
+	color: #2B2420;
+}
+
+.pf-cond-field-sel { flex: 0 0 36%; min-width: 0; }
+.pf-cond-op-sel    { flex: 0 0 30%; min-width: 0; }
+.pf-cond-val-wrap  { flex: 1; min-width: 0; }
+.pf-cond-val-wrap select,
+.pf-cond-val-wrap input { width: 100%; }
+
+.pf-cond-rule-del {
+	background: none;
+	border: none;
+	color: #C9BBA8;
+	font-size: 18px;
+	cursor: pointer;
+	padding: 0 3px;
+	line-height: 1;
+	flex-shrink: 0;
+	transition: color 0.12s;
+}
+.pf-cond-rule-del:hover { color: #C44545; }
+
+.pf-cond-sep {
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: #B5654A;
+	text-align: center;
+	padding: 2px 0;
+}
+
+.pf-cond-add-btn {
+	align-self: flex-start;
+	font-size: 12px;
+}

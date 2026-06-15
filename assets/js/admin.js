@@ -109,10 +109,11 @@ jQuery(function ($) {
 		// U builderu polja s uvjetom NISU skrivena — uvijek vidljiva za uređivanje.
 		// (display:none za uvjete primjenjuje se samo u Pregledu/frontendu)
 		var condAttrs = '';
-		if (field.condition && field.condition.field) {
-			condAttrs = ' data-cond-field="' + escapeAttr(field.condition.field) + '"'
-			          + ' data-cond-op="'    + escapeAttr(field.condition.operator || 'equals') + '"'
-			          + ' data-cond-value="' + escapeAttr(field.condition.value || '') + '"';
+		if (field.condition) {
+			var cond = field.condition.rules
+				? field.condition
+				: { match: 'all', rules: [{ field: field.condition.field, operator: field.condition.operator || 'equals', value: field.condition.value || '' }] };
+			condAttrs = ' data-pf-cond=\'' + JSON.stringify(cond).replace(/'/g, '&#39;') + '\'';
 		}
 
 		// VAŽNO: u builderu NIKAD ne skrivaj polje — uvijek prazan style
@@ -219,10 +220,11 @@ jQuery(function ($) {
 		var req   = field.required ? ' <span class="pf-required-mark">*</span>' : '';
 
 		var condAttrs = '';
-		if (field.condition && field.condition.field) {
-			condAttrs = ' data-cond-field="' + escapeAttr(field.condition.field) + '"'
-			          + ' data-cond-op="'    + escapeAttr(field.condition.operator || 'equals') + '"'
-			          + ' data-cond-value="' + escapeAttr(field.condition.value || '') + '"';
+		if (field.condition) {
+			var cond = field.condition.rules
+				? field.condition
+				: { match: 'all', rules: [{ field: field.condition.field, operator: field.condition.operator || 'equals', value: field.condition.value || '' }] };
+			condAttrs = ' data-pf-cond=\'' + JSON.stringify(cond).replace(/'/g, '&#39;') + '\'';
 		}
 		var initialStyle = condAttrs ? ' style="display:none;"' : '';
 
@@ -956,86 +958,179 @@ jQuery(function ($) {
 
 	function buildConditionSection(field) {
 		var $wrap = $('<div class="pf-condition-block"></div>');
-		$wrap.append('<h4>Uvjet prikaza</h4>');
+
+		// Migriraj staru strukturu { field, operator, value } → nova { match: 'all', rules: [...] }
+		if (field.condition && field.condition.field && !field.condition.rules) {
+			field.condition = {
+				match: 'all',
+				rules: [{ field: field.condition.field, operator: field.condition.operator || 'equals', value: field.condition.value || '' }]
+			};
+		}
+		if (!field.condition) field.condition = null;
 
 		var hasCond = !!field.condition;
-		var $enableLabel = $('<label><input type="checkbox"' + (hasCond ? ' checked' : '') + '> Prikaži ovo polje samo ako je ispunjen uvjet</label>');
+
+		$wrap.append('<h4 style="margin:0 0 10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#9C9182;">Uvjet prikaza</h4>');
+		var $enableLabel = $('<label class="pf-cond-toggle"><input type="checkbox"' + (hasCond ? ' checked' : '') + '> <span>Prikaži ovo polje samo ako je uvjet ispunjen</span></label>');
 		$wrap.append($enableLabel);
 
-		var $condFields = $('<div class="pf-condition-fields"></div>');
-		$condFields.toggle(hasCond);
-		$wrap.append($condFields);
+		var $condMain = $('<div class="pf-cond-main"></div>');
+		$condMain.toggle(hasCond);
+		$wrap.append($condMain);
 
-		function renderConditionInputs() {
-			$condFields.empty();
+		var OPS_NO_VALUE = ['is_empty', 'is_not_empty'];
 
-			var others = allFieldsFlat().filter(function (f) { return f !== field && f.name; });
-			if (others.length === 0) {
-				$condFields.append('<p class="description">Nema drugih polja za postavljanje uvjeta.</p>');
-				return;
-			}
+		var OPS = {
+			'equals':       'jednako je',
+			'not_equals':   'nije jednako',
+			'contains':     'sadrži',
+			'not_contains': 'ne sadrži',
+			'starts_with':  'počinje s',
+			'is_empty':     'je prazno',
+			'is_not_empty': 'nije prazno',
+			'greater_than': 'veće od',
+			'less_than':    'manje od',
+		};
 
-			if (!field.condition || !others.some(function (f) { return f.name === field.condition.field; })) {
-				field.condition = { field: others[0].name, operator: 'equals', value: '' };
-			}
+		function getOtherFields() {
+			return allFieldsFlat().filter(function (f) { return f !== field && f.name; });
+		}
 
-			var $fieldSelect = $('<select></select>');
+		function getFieldOptions(name) {
+			var f = allFieldsFlat().filter(function (f) { return f.name === name; })[0];
+			return (f && f.options && f.options.length) ? f.options : null;
+		}
+
+		function renderRuleRow(rule, idx, $rulesWrap) {
+			var others = getOtherFields();
+			var $row = $('<div class="pf-cond-rule-row" data-idx="' + idx + '"></div>');
+
+			// Polje
+			var $fsel = $('<select class="pf-cond-field-sel"></select>');
 			others.forEach(function (f) {
-				var sel = field.condition.field === f.name ? ' selected' : '';
-				$fieldSelect.append('<option value="' + escapeAttr(f.name) + '"' + sel + '>' + escapeHtml(f.label || f.name) + '</option>');
+				$fsel.append('<option value="' + escapeAttr(f.name) + '"' + (rule.field === f.name ? ' selected' : '') + '>' + escapeHtml(f.label || f.name) + '</option>');
 			});
 
-			var ops = { equals: 'jednako je', not_equals: 'nije jednako', contains: 'sadrži' };
-			var $opSelect = $('<select></select>');
-			Object.keys(ops).forEach(function (k) {
-				var sel = field.condition.operator === k ? ' selected' : '';
-				$opSelect.append('<option value="' + k + '"' + sel + '>' + ops[k] + '</option>');
+			// Operator
+			var $opsel = $('<select class="pf-cond-op-sel"></select>');
+			Object.keys(OPS).forEach(function (k) {
+				$opsel.append('<option value="' + k + '"' + (rule.operator === k ? ' selected' : '') + '>' + OPS[k] + '</option>');
 			});
 
-			var $valInput = $('<input type="text" placeholder="vrijednost">').val(field.condition.value);
+			// Vrijednost
+			var $valWrap = $('<span class="pf-cond-val-wrap"></span>');
 
-			function sync() {
-				field.condition = {
-					field: $fieldSelect.val(),
-					operator: $opSelect.val(),
-					value: $valInput.val()
-				};
+			function renderValue() {
+				$valWrap.empty();
+				var op = $opsel.val();
+				if (OPS_NO_VALUE.indexOf(op) > -1) {
+					rule.value = '';
+					return;
+				}
+				var opts = getFieldOptions($fsel.val());
+				if (opts) {
+					var $vsel = $('<select class="pf-cond-val-sel"></select>');
+					opts.forEach(function (o) {
+						$vsel.append('<option value="' + escapeAttr(o) + '"' + (rule.value === o ? ' selected' : '') + '>' + escapeHtml(o) + '</option>');
+					});
+					$vsel.on('change', function () { rule.value = $(this).val(); });
+					if (!rule.value || !opts.some(function(o){return o===rule.value;})) {
+						rule.value = opts[0] || '';
+						$vsel.val(rule.value);
+					}
+					$valWrap.append($vsel);
+				} else {
+					var inputType = ['greater_than','less_than'].indexOf(op) > -1 ? 'number' : 'text';
+					var $vinp = $('<input type="' + inputType + '" class="pf-cond-val-inp" placeholder="vrijednost">').val(rule.value || '');
+					$vinp.on('input', function () { rule.value = $(this).val(); });
+					$valWrap.append($vinp);
+				}
 			}
 
-			$fieldSelect.on('change', sync);
-			$opSelect.on('change', sync);
-			$valInput.on('input', sync);
+			$fsel.on('change', function () {
+				rule.field = $(this).val();
+				rule.value = '';
+				renderValue();
+			});
+			$opsel.on('change', function () {
+				rule.operator = $(this).val();
+				renderValue();
+			});
 
-			var $row1 = $('<div class="pf-cond-row"></div>');
-			$row1.append('<label>Polje</label>').append($fieldSelect);
+			renderValue();
 
-			var $row2 = $('<div class="pf-cond-row"></div>');
-			$row2.append('<label>Uvjet</label>').append($opSelect);
+			// Obriši red
+			var $del = $('<button type="button" class="pf-cond-rule-del" title="Ukloni uvjet">&times;</button>');
+			$del.on('click', function () {
+				field.condition.rules.splice(idx, 1);
+				if (field.condition.rules.length === 0) {
+					field.condition = null;
+					$enableLabel.find('input').prop('checked', false);
+					$condMain.hide();
+				} else {
+					renderAll();
+				}
+			});
 
-			var $row3 = $('<div class="pf-cond-row"></div>');
-			$row3.append('<label>Vrijednost</label>').append($valInput);
-
-			$condFields.append($row1).append($row2).append($row3);
+			$row.append($fsel).append($opsel).append($valWrap).append($del);
+			return $row;
 		}
 
-		if (hasCond) {
-			renderConditionInputs();
+		function renderAll() {
+			$condMain.empty();
+			if (!field.condition || !field.condition.rules) return;
+
+			// AND / OR toggle
+			var $matchRow = $('<div class="pf-cond-match-row"></div>');
+			$matchRow.append('<span>Prikaži ako je ispunjeno</span>');
+			var $matchSel = $('<select class="pf-cond-match-sel"></select>');
+			$matchSel.append('<option value="all"' + (field.condition.match !== 'any' ? ' selected' : '') + '>SVI uvjeti (AND)</option>');
+			$matchSel.append('<option value="any"' + (field.condition.match === 'any' ? ' selected' : '') + '>BILO KOJI uvjet (OR)</option>');
+			$matchSel.on('change', function () { field.condition.match = $(this).val(); });
+			$matchRow.append($matchSel);
+			$condMain.append($matchRow);
+
+			// Rule redovi
+			var $rulesWrap = $('<div class="pf-cond-rules-wrap"></div>');
+			field.condition.rules.forEach(function (rule, idx) {
+				$rulesWrap.append(renderRuleRow(rule, idx, $rulesWrap));
+				// Separator AND/OR između redova
+				if (idx < field.condition.rules.length - 1) {
+					var sep = field.condition.match === 'any' ? 'ILI' : 'I';
+					$rulesWrap.append('<div class="pf-cond-sep">' + sep + '</div>');
+				}
+			});
+			$condMain.append($rulesWrap);
+
+			// + Dodaj uvjet
+			if (field.condition.rules.length < 5) {
+				var $addBtn = $('<button type="button" class="button pf-cond-add-btn">+ Dodaj uvjet</button>');
+				$addBtn.on('click', function () {
+					var others = getOtherFields();
+					if (!others.length) return;
+					field.condition.rules.push({ field: others[0].name, operator: 'equals', value: '' });
+					renderAll();
+				});
+				$condMain.append($addBtn);
+			}
 		}
+
+		if (hasCond) renderAll();
 
 		$enableLabel.find('input').on('change', function () {
 			if ($(this).is(':checked')) {
-				var others = allFieldsFlat().filter(function (f) { return f !== field && f.name; });
-				if (others.length === 0) {
-					alert('Nema drugih polja za postavljanje uvjeta - dodaj još neko polje prije ovog.');
+				var others = getOtherFields();
+				if (!others.length) {
+					alert('Nema drugih polja za postavljanje uvjeta.');
 					$(this).prop('checked', false);
 					return;
 				}
-				field.condition = null;
-				renderConditionInputs();
-				$condFields.show();
+				field.condition = { match: 'all', rules: [{ field: others[0].name, operator: 'equals', value: '' }] };
+				renderAll();
+				$condMain.show();
 			} else {
 				field.condition = null;
-				$condFields.hide();
+				$condMain.hide();
 			}
 		});
 

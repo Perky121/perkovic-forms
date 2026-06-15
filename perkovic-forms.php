@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.8.0
+ * Version: 1.8.1
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.8.0' );
+define( 'PF_VERSION', '1.8.1' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -567,39 +567,66 @@ function pf_handle_file_upload( $file ) {
 /* =========================================================
  *  HELPER: evaluacija conditional logike (server-side)
  * ========================================================= */
+function pf_single_cond_met( $target, $op, $value ) {
+	$is_array = is_array( $target );
+	switch ( $op ) {
+		case 'is_empty':
+			return $is_array ? empty( $target ) : ( $target === '' );
+		case 'is_not_empty':
+			return $is_array ? ! empty( $target ) : ( $target !== '' );
+		case 'not_equals':
+			return $is_array ? ! in_array( $value, $target, true ) : $target !== $value;
+		case 'contains':
+			if ( $is_array ) {
+				foreach ( $target as $t ) { if ( stripos( $t, $value ) !== false ) return true; }
+				return false;
+			}
+			return stripos( $target, $value ) !== false;
+		case 'not_contains':
+			if ( $is_array ) {
+				foreach ( $target as $t ) { if ( stripos( $t, $value ) !== false ) return false; }
+				return true;
+			}
+			return stripos( $target, $value ) === false;
+		case 'starts_with':
+			if ( $is_array ) {
+				foreach ( $target as $t ) { if ( stripos( $t, $value ) === 0 ) return true; }
+				return false;
+			}
+			return stripos( $target, $value ) === 0;
+		case 'greater_than':
+			return floatval( $is_array ? ( $target[0] ?? '' ) : $target ) > floatval( $value );
+		case 'less_than':
+			return floatval( $is_array ? ( $target[0] ?? '' ) : $target ) < floatval( $value );
+		default: // equals
+			return $is_array ? in_array( $value, $target, true ) : $target === $value;
+	}
+}
+
 function pf_condition_met( $condition, $raw_values ) {
-	if ( empty( $condition['field'] ) ) {
-		return true;
+	if ( empty( $condition ) ) return true;
+
+	// Nova struktura: { match, rules: [...] }
+	if ( ! empty( $condition['rules'] ) && is_array( $condition['rules'] ) ) {
+		$match   = isset( $condition['match'] ) ? $condition['match'] : 'all';
+		$results = array();
+		foreach ( $condition['rules'] as $rule ) {
+			if ( empty( $rule['field'] ) ) continue;
+			$target    = isset( $raw_values[ $rule['field'] ] ) ? $raw_values[ $rule['field'] ] : '';
+			$op        = isset( $rule['operator'] ) ? sanitize_key( $rule['operator'] ) : 'equals';
+			$val       = isset( $rule['value'] ) ? $rule['value'] : '';
+			$results[] = pf_single_cond_met( $target, $op, $val );
+		}
+		if ( empty( $results ) ) return true;
+		return $match === 'any' ? in_array( true, $results, true ) : ! in_array( false, $results, true );
 	}
 
+	// Stara struktura: { field, operator, value }
+	if ( empty( $condition['field'] ) ) return true;
 	$target = isset( $raw_values[ $condition['field'] ] ) ? $raw_values[ $condition['field'] ] : '';
 	$op     = isset( $condition['operator'] ) ? $condition['operator'] : 'equals';
 	$value  = isset( $condition['value'] ) ? $condition['value'] : '';
-
-	if ( is_array( $target ) ) {
-		switch ( $op ) {
-			case 'not_equals':
-				return ! in_array( $value, $target, true );
-			case 'contains':
-				foreach ( $target as $t ) {
-					if ( stripos( $t, $value ) !== false ) {
-						return true;
-					}
-				}
-				return false;
-			default: // equals
-				return in_array( $value, $target, true );
-		}
-	}
-
-	switch ( $op ) {
-		case 'not_equals':
-			return $target !== $value;
-		case 'contains':
-			return stripos( $target, $value ) !== false;
-		default: // equals
-			return $target === $value;
-	}
+	return pf_single_cond_met( $target, $op, $value );
 }
 
 
@@ -708,17 +735,40 @@ function pf_flatten_fields( $structure ) {
  * Sanitizacija jednog polja (zajednička za sve cells/cols)
  */
 function pf_sanitize_field( $f ) {
-	$condition = null;
-	if ( isset( $f['condition'] ) && is_array( $f['condition'] ) && ! empty( $f['condition']['field'] ) ) {
-		$op = isset( $f['condition']['operator'] ) ? sanitize_key( $f['condition']['operator'] ) : 'equals';
-		if ( ! in_array( $op, array( 'equals', 'not_equals', 'contains' ), true ) ) {
-			$op = 'equals';
+	$condition  = null;
+	$allowed_ops = array( 'equals', 'not_equals', 'contains', 'not_contains', 'starts_with', 'is_empty', 'is_not_empty', 'greater_than', 'less_than' );
+
+	if ( isset( $f['condition'] ) && is_array( $f['condition'] ) ) {
+		// Nova struktura: { match, rules: [...] }
+		if ( ! empty( $f['condition']['rules'] ) && is_array( $f['condition']['rules'] ) ) {
+			$match = ( isset( $f['condition']['match'] ) && $f['condition']['match'] === 'any' ) ? 'any' : 'all';
+			$clean_rules = array();
+			foreach ( $f['condition']['rules'] as $rule ) {
+				if ( empty( $rule['field'] ) ) continue;
+				$op = isset( $rule['operator'] ) ? sanitize_key( $rule['operator'] ) : 'equals';
+				if ( ! in_array( $op, $allowed_ops, true ) ) $op = 'equals';
+				$clean_rules[] = array(
+					'field'    => sanitize_key( $rule['field'] ),
+					'operator' => $op,
+					'value'    => isset( $rule['value'] ) ? sanitize_text_field( $rule['value'] ) : '',
+				);
+			}
+			if ( ! empty( $clean_rules ) ) {
+				$condition = array( 'match' => $match, 'rules' => $clean_rules );
+			}
+		// Stara struktura: { field, operator, value }
+		} elseif ( ! empty( $f['condition']['field'] ) ) {
+			$op = isset( $f['condition']['operator'] ) ? sanitize_key( $f['condition']['operator'] ) : 'equals';
+			if ( ! in_array( $op, $allowed_ops, true ) ) $op = 'equals';
+			$condition = array(
+				'match' => 'all',
+				'rules' => array( array(
+					'field'    => sanitize_key( $f['condition']['field'] ),
+					'operator' => $op,
+					'value'    => isset( $f['condition']['value'] ) ? sanitize_text_field( $f['condition']['value'] ) : '',
+				) ),
+			);
 		}
-		$condition = array(
-			'field'    => sanitize_key( $f['condition']['field'] ),
-			'operator' => $op,
-			'value'    => isset( $f['condition']['value'] ) ? sanitize_text_field( $f['condition']['value'] ) : '',
-		);
 	}
 
 	$utm_source = isset( $f['utm_source'] ) ? sanitize_key( $f['utm_source'] ) : '';
@@ -2526,15 +2576,22 @@ function pf_render_frontend_field( $field ) {
 		return;
 	}
 
-	// Build cond_attrs early - używane przez wszystkie typy
+	// Build cond_attrs - novi format JSON
 	$cond_attrs = '';
-	if ( isset( $field['condition'] ) && is_array( $field['condition'] ) && ! empty( $field['condition']['field'] ) ) {
-		$cond_attrs = sprintf(
-			' data-cond-field="%s" data-cond-op="%s" data-cond-value="%s"',
-			esc_attr( $field['condition']['field'] ),
-			esc_attr( $field['condition']['operator'] ),
-			esc_attr( $field['condition']['value'] )
-		);
+	if ( isset( $field['condition'] ) && is_array( $field['condition'] ) ) {
+		$cond_obj = null;
+		if ( ! empty( $field['condition']['rules'] ) ) {
+			$cond_obj = $field['condition'];
+		} elseif ( ! empty( $field['condition']['field'] ) ) {
+			$cond_obj = array( 'match' => 'all', 'rules' => array( array(
+				'field'    => $field['condition']['field'],
+				'operator' => $field['condition']['operator'] ?? 'equals',
+				'value'    => $field['condition']['value'] ?? '',
+			) ) );
+		}
+		if ( $cond_obj ) {
+			$cond_attrs = ' data-pf-cond=\'' . esc_attr( wp_json_encode( $cond_obj ) ) . '\'';
+		}
 	}
 
 	// Section divider

@@ -237,28 +237,54 @@
 		return els[0].value;
 	}
 
-	function conditionMet(target, op, value) {
-		if (Array.isArray(target)) {
-			switch (op) {
-				case 'not_equals': return target.indexOf(value) === -1;
-				case 'contains':   return target.some(function (t) { return t.toLowerCase().indexOf(value.toLowerCase()) !== -1; });
-				default:           return target.indexOf(value) !== -1;
-			}
-		}
+	function singleCondMet(target, op, value) {
 		switch (op) {
-			case 'not_equals': return target !== value;
-			case 'contains':   return target.toLowerCase().indexOf(value.toLowerCase()) !== -1;
-			default:           return target === value;
+			case 'is_empty':     return Array.isArray(target) ? target.length === 0 : target === '';
+			case 'is_not_empty': return Array.isArray(target) ? target.length > 0   : target !== '';
+			case 'not_equals':
+				return Array.isArray(target) ? target.indexOf(value) === -1 : target !== value;
+			case 'contains':
+				return Array.isArray(target)
+					? target.some(function(t){ return t.toLowerCase().indexOf(value.toLowerCase()) !== -1; })
+					: target.toLowerCase().indexOf(value.toLowerCase()) !== -1;
+			case 'not_contains':
+				return Array.isArray(target)
+					? !target.some(function(t){ return t.toLowerCase().indexOf(value.toLowerCase()) !== -1; })
+					: target.toLowerCase().indexOf(value.toLowerCase()) === -1;
+			case 'starts_with':
+				return Array.isArray(target)
+					? target.some(function(t){ return t.toLowerCase().indexOf(value.toLowerCase()) === 0; })
+					: target.toLowerCase().indexOf(value.toLowerCase()) === 0;
+			case 'greater_than': return parseFloat(target) > parseFloat(value);
+			case 'less_than':    return parseFloat(target) < parseFloat(value);
+			default: // equals
+				return Array.isArray(target) ? target.indexOf(value) !== -1 : target === value;
 		}
 	}
 
+	function conditionMet(target, op, value) {
+		return singleCondMet(target, op, value);
+	}
+
+	function evalCond(form, cond) {
+		if (!cond) return true;
+		// Stara struktura { field, operator, value }
+		if (!cond.rules) {
+			return singleCondMet(getFieldValue(form, cond.field), cond.operator || 'equals', cond.value || '');
+		}
+		// Nova struktura { match, rules }
+		var results = cond.rules.map(function (r) {
+			return singleCondMet(getFieldValue(form, r.field), r.operator || 'equals', r.value || '');
+		});
+		if (cond.match === 'any') return results.some(Boolean);
+		return results.every(Boolean);
+	}
+
 	function evaluateConditions(form) {
-		form.querySelectorAll('[data-cond-field]').forEach(function (el) {
-			var show = conditionMet(
-				getFieldValue(form, el.getAttribute('data-cond-field')),
-				el.getAttribute('data-cond-op'),
-				el.getAttribute('data-cond-value')
-			);
+		form.querySelectorAll('[data-pf-cond]').forEach(function (el) {
+			var cond = null;
+			try { cond = JSON.parse(el.getAttribute('data-pf-cond')); } catch(e) {}
+			var show = evalCond(form, cond);
 			el.classList.toggle('pf-hidden', !show);
 			el.querySelectorAll('input, select, textarea').forEach(function (ctrl) {
 				if (!show) {
@@ -270,13 +296,22 @@
 				}
 			});
 		});
+		// Backward compat — stari data-cond-field atributi
+		form.querySelectorAll('[data-cond-field]').forEach(function (el) {
+			var show = singleCondMet(
+				getFieldValue(form, el.getAttribute('data-cond-field')),
+				el.getAttribute('data-cond-op') || 'equals',
+				el.getAttribute('data-cond-value') || ''
+			);
+			el.classList.toggle('pf-hidden', !show);
+		});
 	}
 
 	// Je li stranica (step panel) vidljiva prema svom uvjetu?
 	function isStepVisible(form, panel) {
 		var condField = panel.getAttribute('data-step-cond-field');
-		if (!condField) return true; // bez uvjeta = uvijek vidljiva
-		return conditionMet(
+		if (!condField) return true;
+		return singleCondMet(
 			getFieldValue(form, condField),
 			panel.getAttribute('data-step-cond-op') || 'equals',
 			panel.getAttribute('data-step-cond-value') || ''
