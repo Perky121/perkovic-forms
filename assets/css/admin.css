@@ -1747,8 +1747,11 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 .pf-preview-frame .pf-step-panel.is-active { display: block !important; }
 .pf-preview-frame .pf-step-actions { margin-top: 20px; }
 .pf-preview-frame.is-mobile { max-width: 360px; padding: 20px; }
-.pf-preview-frame.is-mobile .pf-row.pf-cols-2,
-.pf-preview-frame.is-mobile .pf-row.pf-cols-3 { grid-template-columns: 1fr; }
+.pf-preview-frame.is-mobile .pf-row {
+	flex-direction: column;
+	gap: 0;
+}
+.pf-preview-frame .pf-col.pf-col-hidden { display: none; }
 
 /* ============================================================
    AI ASISTENT TAB
@@ -3178,3 +3181,49 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 	align-self: flex-start;
 	font-size: 12px;
 }
+
+/* ---- Pod-stranice (sub-page tabs) ---- */
+.pf-step-tab.is-subpage {
+	margin-left: 14px;
+	font-size: 12px;
+	opacity: 0.92;
+}
+
+.pf-step-tab.is-subpage::before {
+	content: '↳';
+	color: #C9BBA8;
+	margin-right: 4px;
+	font-size: 13px;
+}
+
+.pf-step-tab-num {
+	display: inline-block;
+	min-width: 20px;
+	text-align: center;
+	font-weight: 700;
+	color: #B5654A;
+	background: #F5EAE5;
+	border-radius: 4px;
+	padding: 1px 5px;
+	font-size: 11px;
+	margin-right: 2px;
+}
+
+.pf-step-tab.is-subpage .pf-step-tab-num {
+	background: #EFEAE2;
+	color: #9C7A68;
+}
+
+.pf-step-tab-addsub {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: #C9BBA8;
+	font-size: 14px;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	padding: 0 2px;
+	transition: color 0.12s;
+}
+.pf-step-tab-addsub:hover { color: #B5654A; }

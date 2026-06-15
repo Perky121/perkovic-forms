@@ -339,10 +339,46 @@
 			);
 			el.classList.toggle('pf-hidden', !show);
 		});
+
+		// Kolabiraj stupce u kojima su SVA polja skrivena (preostali stupci dijele širinu)
+		collapseEmptyColumns(form);
+	}
+
+	function collapseEmptyColumns(form) {
+		form.querySelectorAll('.pf-row').forEach(function (row) {
+			var cols = Array.prototype.slice.call(row.querySelectorAll(':scope > .pf-col'));
+			if (cols.length < 2) return; // jednostupčani redovi se ne diraju
+
+			cols.forEach(function (col) {
+				var fields = Array.prototype.slice.call(col.querySelectorAll('.pf-field'));
+				if (!fields.length) {
+					// Prazan stupac (placeholder) — sakrij ako red ima druge stupce s poljima
+					col.classList.add('pf-col-hidden');
+					return;
+				}
+				// Stupac je skriven ako su SVA polja u njemu skrivena
+				var allHidden = fields.every(function (f) { return f.classList.contains('pf-hidden'); });
+				col.classList.toggle('pf-col-hidden', allHidden);
+			});
+
+			// Ako su SVI stupci skriveni, prikaži ih natrag (da se ne izgubi cijeli red)
+			var visible = cols.filter(function (c) { return !c.classList.contains('pf-col-hidden'); });
+			if (visible.length === 0) {
+				cols.forEach(function (c) { c.classList.remove('pf-col-hidden'); });
+			}
+		});
 	}
 
 	// Je li stranica (step panel) vidljiva prema svom uvjetu?
 	function isStepVisible(form, panel) {
+		// Nova multi-rule struktura
+		var pfCond = panel.getAttribute('data-step-pf-cond');
+		if (pfCond) {
+			var cond = null;
+			try { cond = JSON.parse(pfCond); } catch(e) {}
+			if (cond) return evalCond(form, cond);
+		}
+		// Stara single struktura
 		var condField = panel.getAttribute('data-step-cond-field');
 		if (!condField) return true;
 		return singleCondMet(

@@ -499,13 +499,36 @@ jQuery(function ($) {
 			alert('Forma mora imati bar jedan korak.');
 			return;
 		}
-		var hasFields = step.rows.some(function (r) { return r.cells.some(function (c) { return c.length > 0; }); });
+		var idx = pfSteps.indexOf(step);
+
+		// Ako je glavna stranica, pronađi pripadajuće pod-stranice
+		var groupIndices = [idx];
+		if (!step.isSubpage) {
+			var j = idx + 1;
+			while (j < pfSteps.length && pfSteps[j].isSubpage) {
+				groupIndices.push(j);
+				j++;
+			}
+		}
+
+		// Provjeri ima li polja u bilo kojem koraku grupe
+		var hasFields = groupIndices.some(function (gi) {
+			return pfSteps[gi].rows.some(function (r) { return r.cells.some(function (c) { return c.length > 0; }); });
+		});
 		if (hasFields) {
-			alert('Premjesti ili obriši polja iz ovog koraka prije brisanja.');
+			alert('Premjesti ili obriši polja iz ove stranice (i njenih pod-stranica) prije brisanja.');
 			return;
 		}
-		var idx = pfSteps.indexOf(step);
-		pfSteps.splice(idx, 1);
+
+		if (groupIndices.length > 1) {
+			if (!confirm('Ova stranica ima ' + (groupIndices.length - 1) + ' pod-stranica. Obrisati sve?')) return;
+		}
+
+		// Obriši od najvećeg indeksa prema najmanjem
+		groupIndices.sort(function (a, b) { return b - a; }).forEach(function (gi) {
+			pfSteps.splice(gi, 1);
+		});
+
 		if (activeStep >= pfSteps.length) {
 			activeStep = pfSteps.length - 1;
 		}
@@ -640,12 +663,38 @@ jQuery(function ($) {
 		return $wrap;
 	}
 
+	// Izračunaj hijerarhijsku numeraciju: glavne stranice 1,2,3...; pod-stranice 2.1, 2.2...
+	function computeStepNumbers() {
+		var numbers = [];
+		var mainCount = 0;
+		var subCount = 0;
+		pfSteps.forEach(function (step) {
+			if (step.isSubpage) {
+				subCount++;
+				numbers.push(mainCount + '.' + subCount);
+			} else {
+				mainCount++;
+				subCount = 0;
+				numbers.push(String(mainCount));
+			}
+		});
+		return numbers;
+	}
+
 	function getStepLabel(step, i) {
-		return (step.label && step.label.trim()) ? step.label.trim() : ('Stranica ' + (i + 1));
+		if (step.label && step.label.trim()) return step.label.trim();
+		var nums = computeStepNumbers();
+		return 'Stranica ' + (nums[i] || (i + 1));
+	}
+
+	function getStepNumber(i) {
+		var nums = computeStepNumbers();
+		return nums[i] || String(i + 1);
 	}
 
 	function renderTabs() {
 		var $tabs = $('#pf-steps-tabs').empty();
+		var stepNumbers = computeStepNumbers();
 
 		pfSteps.forEach(function (step, i) {
 			if (!step.hasOwnProperty('enabled'))   step.enabled   = true;
@@ -654,20 +703,24 @@ jQuery(function ($) {
 
 			var isActive   = (i === activeStep);
 			var isDisabled = (step.enabled === false);
-			var hasCond    = (step.condition && step.condition.field);
+			var hasCond    = (step.condition && (step.condition.field || (step.condition.rules && step.condition.rules.length)));
 
 			var cls = 'pf-step-tab';
+			if (step.isSubpage) cls += ' is-subpage';
 			if (isActive)   cls += ' is-active';
 			if (isDisabled) cls += ' is-disabled';
 			if (hasCond)    cls += ' has-condition';
 
 			var $tab = $('<div class="' + cls + '" data-step-index="' + i + '" draggable="true"></div>');
 
-			// Label (editable na dblclick)
-			var $label = $('<span class="pf-step-tab-label">' + escapeHtml(getStepLabel(step, i)) + '</span>');
+			// Label (editable na dblclick) — s brojem prefiksom
+			var displayLabel = (step.label && step.label.trim())
+				? step.label.trim()
+				: 'Stranica ' + stepNumbers[i];
+			var $label = $('<span class="pf-step-tab-label"><span class="pf-step-tab-num">' + escapeHtml(stepNumbers[i]) + '</span> ' + escapeHtml(displayLabel) + '</span>');
 			$label.on('dblclick', function (e) {
 				e.stopPropagation();
-				var $input = $('<input type="text" class="pf-step-tab-rename" value="' + escapeAttr(step.label || '') + '" placeholder="Stranica ' + (i + 1) + '">');
+				var $input = $('<input type="text" class="pf-step-tab-rename" value="' + escapeAttr(step.label || '') + '" placeholder="Stranica ' + stepNumbers[i] + '">');
 				$(this).replaceWith($input);
 				$input.focus().select();
 				function commitRename() {
@@ -682,6 +735,23 @@ jQuery(function ($) {
 				});
 			});
 			$tab.append($label);
+
+			// Gumb: dodaj pod-stranicu (samo na glavnim stranicama)
+			if (!step.isSubpage) {
+				var $addSub = $('<button type="button" class="pf-step-tab-addsub dashicons dashicons-plus" title="Dodaj pod-stranicu"></button>');
+				$addSub.on('click', function (e) {
+					e.stopPropagation();
+					// Pronađi gdje završava ova grupa (zadnja pod-stranica ovog parenta)
+					var insertAt = i + 1;
+					while (insertAt < pfSteps.length && pfSteps[insertAt].isSubpage) {
+						insertAt++;
+					}
+					pfSteps.splice(insertAt, 0, { rows: [{ cols: 1, cells: [[]] }], label: '', enabled: true, condition: null, isSubpage: true });
+					activeStep = insertAt;
+					renderCanvas();
+				});
+				$tab.append($addSub);
+			}
 
 			// Badge: uvjetno
 			if (hasCond) {
@@ -751,9 +821,9 @@ jQuery(function ($) {
 			$tabs.append($tab);
 		});
 
-		var $add = $('<button type="button" class="pf-step-tab-add" title="Dodaj stranicu"><span class="dashicons dashicons-plus-alt2"></span></button>');
+		var $add = $('<button type="button" class="pf-step-tab-add" title="Dodaj glavnu stranicu"><span class="dashicons dashicons-plus-alt2"></span></button>');
 		$add.on('click', function () {
-			pfSteps.push({ rows: [{ cols: 1, cells: [[]] }], label: '', enabled: true, condition: null });
+			pfSteps.push({ rows: [{ cols: 1, cells: [[]] }], label: '', enabled: true, condition: null, isSubpage: false });
 			activeStep = pfSteps.length - 1;
 			renderCanvas();
 		});
@@ -1684,10 +1754,12 @@ jQuery(function ($) {
 
 		// Step indicator (samo ako ima više stranica)
 		if (totalSteps > 1) {
+			var previewNums = computeStepNumbers();
 			html += '<div class="pf-steps-indicator">';
 			pfSteps.forEach(function (step, i) {
 				var dotTitle = getStepLabel(step, i);
-				html += '<div class="pf-step-dot ' + (i === 0 ? 'is-active' : '') + '" data-step="' + (i + 1) + '" title="' + escapeAttr(dotTitle) + '">' + (i + 1) + '</div>';
+				var subCls = step.isSubpage ? ' pf-step-dot-sub' : '';
+				html += '<div class="pf-step-dot ' + (i === 0 ? 'is-active' : '') + subCls + '" data-step="' + (i + 1) + '" title="' + escapeAttr(dotTitle) + '">' + escapeHtml(previewNums[i]) + '</div>';
 				if (i < totalSteps - 1) html += '<div class="pf-step-line"></div>';
 			});
 			html += '</div>';
@@ -1698,15 +1770,17 @@ jQuery(function ($) {
 			html += '<div class="pf-step-panel ' + (isActive ? 'is-active' : '') + '" data-step="' + (i + 1) + '">';
 
 			step.rows.forEach(function (row) {
-				html += '<div class="pf-row pf-cols-' + row.cols + '">';
+				html += '<div class="pf-row pf-cols-' + row.cols + '" data-cols="' + row.cols + '">';
+				var ci = 0;
 				row.cells.forEach(function (cell) {
-					html += '<div class="pf-col">';
+					html += '<div class="pf-col" data-col-index="' + ci + '">';
 					cell.forEach(function (f) {
 						if (f.type !== 'hidden') {
 							html += buildPreviewFieldHTML(f);
 						}
 					});
 					html += '</div>';
+					ci++;
 				});
 				html += '</div>';
 			});
@@ -1890,6 +1964,19 @@ jQuery(function ($) {
 			var cond = null;
 			try { cond = JSON.parse(el.getAttribute('data-pf-cond')); } catch(e) {}
 			el.style.display = previewEvalCond(frame, cond) ? '' : 'none';
+		});
+		// Kolabiraj prazne stupce
+		frame.querySelectorAll('.pf-row').forEach(function (row) {
+			var cols = Array.prototype.slice.call(row.querySelectorAll(':scope > .pf-col'));
+			if (cols.length < 2) return;
+			cols.forEach(function (col) {
+				var fields = Array.prototype.slice.call(col.querySelectorAll('.pf-field'));
+				if (!fields.length) { col.classList.add('pf-col-hidden'); return; }
+				var allHidden = fields.every(function (f) { return f.style.display === 'none'; });
+				col.classList.toggle('pf-col-hidden', allHidden);
+			});
+			var visible = cols.filter(function (c) { return !c.classList.contains('pf-col-hidden'); });
+			if (visible.length === 0) cols.forEach(function (c) { c.classList.remove('pf-col-hidden'); });
 		});
 	}
 

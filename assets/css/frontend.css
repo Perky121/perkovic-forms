@@ -98,22 +98,29 @@
 	to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ---- Grid ---- */
+/* ---- Grid (flexbox — stupci se kolabiraju kad su skriveni) ---- */
 .pf-form .pf-row {
-	display: grid;
-	gap: 0 16px;
-	grid-template-columns: 1fr;
+	display: flex;
+	gap: 16px;
+	align-items: flex-start;
 }
 
-.pf-form .pf-row.pf-cols-2 { grid-template-columns: repeat(2, 1fr); }
-.pf-form .pf-row.pf-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.pf-form .pf-col {
+	min-width: 0;
+	flex: 1 1 0;
+}
+
+/* Skriveni stupac (sva polja unutra skrivena uvjetnom logikom) */
+.pf-form .pf-col.pf-col-hidden {
+	display: none;
+}
 
 @media (max-width: 560px) {
-	.pf-form .pf-row.pf-cols-2,
-	.pf-form .pf-row.pf-cols-3 { grid-template-columns: 1fr; }
+	.pf-form .pf-row {
+		flex-direction: column;
+		gap: 0;
+	}
 }
-
-.pf-form .pf-col { min-width: 0; }
 
 /* ---- Fields ---- */
 .pf-form .pf-field {
@@ -817,4 +824,17 @@
 	color: #9C9182;
 	letter-spacing: 0.02em;
 	padding: 0 2px;
+}
+
+/* Sub-page dot u step indikatoru — manji, drugačija nijansa */
+.pf-form .pf-step-dot-sub {
+	width: 24px;
+	height: 24px;
+	font-size: 10px;
+	background: #EFEAE2;
+}
+.pf-form .pf-step-dot-sub.is-active,
+.pf-form .pf-step-dot-sub.is-complete {
+	background: var(--pf-primary, #B5654A);
+	opacity: 0.85;
 }

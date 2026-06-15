@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.8.6
+ * Version: 1.9.0
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.8.6' );
+define( 'PF_VERSION', '1.9.0' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -850,6 +850,7 @@ function pf_sanitize_form_structure( $structure ) {
 			'label'     => isset( $step['label'] ) ? sanitize_text_field( $step['label'] ) : '',
 			'enabled'   => isset( $step['enabled'] ) ? (bool) $step['enabled'] : true,
 			'condition' => $step_condition,
+			'isSubpage' => ! empty( $step['isSubpage'] ),
 		);
 	}
 
@@ -1123,16 +1124,16 @@ function pf_theme_css( $form_id, $theme ) {
 		// Step paneli - prikaz/skrivanje
 		. "{$id_sel} .pf-step-panel { display: none !important; }\n"
 		. "{$id_sel} .pf-step-panel.is-active { display: block !important; }\n"
-		// Redovi grid
+		// Redovi flex — stupci se kolabiraju kad su skriveni
 		. "{$id_sel} .pf-row {\n"
-		. "\tdisplay: grid !important;\n"
-		. "\tgap: 0 20px !important;\n"
-		. "\tgrid-template-columns: 1fr !important;\n"
+		. "\tdisplay: flex !important;\n"
+		. "\tgap: 20px !important;\n"
+		. "\talign-items: flex-start !important;\n"
 		. "}\n"
-		. "{$id_sel} .pf-row.pf-cols-2 { grid-template-columns: repeat(2, 1fr) !important; }\n"
-		. "{$id_sel} .pf-row.pf-cols-3 { grid-template-columns: repeat(3, 1fr) !important; }\n"
+		. "{$id_sel} .pf-col { flex: 1 1 0 !important; min-width: 0 !important; }\n"
+		. "{$id_sel} .pf-col.pf-col-hidden { display: none !important; }\n"
 		. "@media (max-width: 640px) {\n"
-		. "\t{$id_sel} .pf-row.pf-cols-2, {$id_sel} .pf-row.pf-cols-3 { grid-template-columns: 1fr !important; }\n"
+		. "\t{$id_sel} .pf-row { flex-direction: column !important; gap: 0 !important; }\n"
 		. "\t{$wrap_sel} { padding: 20px !important; }\n"
 		. "}\n"
 		. "{$id_sel} .pf-field { margin-bottom: 20px !important; padding: 0 !important; border: none !important; }\n"
@@ -2489,15 +2490,31 @@ function pf_shortcode_form( $atts ) {
 	      <?php if ( $ab_variant ) : ?>data-ab-variant="<?php echo esc_attr( $ab_variant ); ?>"<?php endif; ?>
 	      enctype="multipart/form-data" novalidate>
 
+		<?php
+		// Izračunaj hijerarhijske brojeve stranica (glavne: 1,2,3; pod: 2.1, 2.2)
+		$step_numbers = array();
+		$main_count = 0; $sub_count = 0;
+		foreach ( $steps as $si => $st ) {
+			if ( ! empty( $st['isSubpage'] ) ) {
+				$sub_count++;
+				$step_numbers[ $si ] = $main_count . '.' . $sub_count;
+			} else {
+				$main_count++; $sub_count = 0;
+				$step_numbers[ $si ] = (string) $main_count;
+			}
+		}
+		?>
+
 		<?php if ( $total_steps > 1 ) : ?>
 			<div class="pf-steps-indicator">
 				<?php for ( $i = 0; $i < $total_steps; $i++ ) :
-					$step_label = ! empty( $steps[ $i ]['label'] ) ? $steps[ $i ]['label'] : ( 'Korak ' . ( $i + 1 ) );
+					$step_label = ! empty( $steps[ $i ]['label'] ) ? $steps[ $i ]['label'] : ( 'Stranica ' . $step_numbers[ $i ] );
+					$is_sub = ! empty( $steps[ $i ]['isSubpage'] );
 				?>
-					<div class="pf-step-dot <?php echo $i === 0 ? 'is-active' : ''; ?>"
+					<div class="pf-step-dot <?php echo $i === 0 ? 'is-active' : ''; ?><?php echo $is_sub ? ' pf-step-dot-sub' : ''; ?>"
 					     data-step="<?php echo esc_attr( $i + 1 ); ?>"
 					     title="<?php echo esc_attr( $step_label ); ?>">
-						<?php echo esc_html( $i + 1 ); ?>
+						<?php echo esc_html( $step_numbers[ $i ] ); ?>
 					</div>
 					<?php if ( $i < $total_steps - 1 ) : ?><div class="pf-step-line"></div><?php endif; ?>
 				<?php endfor; ?>
@@ -2508,26 +2525,42 @@ function pf_shortcode_form( $atts ) {
 			// Skip isključenih stranica
 			if ( isset( $step['enabled'] ) && $step['enabled'] === false ) continue;
 
-			// Condition data atributi za JS evaluaciju na frontendu
+			// Condition data atributi — podrška za novu (rules) i staru strukturu
 			$step_cond_attrs = '';
-			if ( ! empty( $step['condition']['field'] ) ) {
-				$step_cond_attrs = ' data-step-cond-field="' . esc_attr( $step['condition']['field'] ) . '"'
-					. ' data-step-cond-op="' . esc_attr( $step['condition']['operator'] ?? 'equals' ) . '"'
-					. ' data-step-cond-value="' . esc_attr( $step['condition']['value'] ?? '' ) . '"';
+			$sc = isset( $step['condition'] ) ? $step['condition'] : null;
+			if ( $sc ) {
+				$sc_field = ''; $sc_op = 'equals'; $sc_val = '';
+				if ( ! empty( $sc['rules'] ) && is_array( $sc['rules'] ) ) {
+					// Uzmi prvo pravilo za data-atribute (frontend evaluira preko data-pf-step-cond za multi)
+					$r0 = $sc['rules'][0];
+					$sc_field = $r0['field'] ?? '';
+					$sc_op    = $r0['operator'] ?? 'equals';
+					$sc_val   = $r0['value'] ?? '';
+					$step_cond_attrs = ' data-step-pf-cond=\'' . esc_attr( wp_json_encode( $sc ) ) . '\'';
+				} elseif ( ! empty( $sc['field'] ) ) {
+					$sc_field = $sc['field'];
+					$sc_op    = $sc['operator'] ?? 'equals';
+					$sc_val   = $sc['value'] ?? '';
+				}
+				if ( $sc_field ) {
+					$step_cond_attrs .= ' data-step-cond-field="' . esc_attr( $sc_field ) . '"'
+						. ' data-step-cond-op="' . esc_attr( $sc_op ) . '"'
+						. ' data-step-cond-value="' . esc_attr( $sc_val ) . '"';
+				}
 			}
 		?>
 			<div class="pf-step-panel <?php echo $i === 0 ? 'is-active' : ''; ?>"
 			     data-step="<?php echo esc_attr( $i + 1 ); ?>"<?php echo $step_cond_attrs; ?>>
 				<?php foreach ( (array) $step['rows'] as $row ) : ?>
 					<?php $cols = isset( $row['cols'] ) ? max( 1, min( 3, intval( $row['cols'] ) ) ) : 1; ?>
-					<div class="pf-row pf-cols-<?php echo esc_attr( $cols ); ?>">
-						<?php foreach ( (array) $row['cells'] as $cell ) : ?>
-							<div class="pf-col">
+					<div class="pf-row pf-cols-<?php echo esc_attr( $cols ); ?>" data-cols="<?php echo esc_attr( $cols ); ?>">
+						<?php $col_idx = 0; foreach ( (array) $row['cells'] as $cell ) : ?>
+							<div class="pf-col" data-col-index="<?php echo esc_attr( $col_idx ); ?>">
 								<?php foreach ( (array) $cell as $field ) : ?>
 									<?php pf_render_frontend_field( $field ); ?>
 								<?php endforeach; ?>
 							</div>
-						<?php endforeach; ?>
+						<?php $col_idx++; endforeach; ?>
 					</div>
 				<?php endforeach; ?>
 
