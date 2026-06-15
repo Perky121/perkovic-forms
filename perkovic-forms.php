@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.6.8
+ * Version: 1.6.9
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.6.8' );
+define( 'PF_VERSION', '1.6.9' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -1638,6 +1638,12 @@ function pf_render_form_edit_page() {
 		</form><!-- /pf-form-edit-form -->
 
 		<!-- Preview modal -->
+		<style>
+			#pf-preview-modal:not(.is-open),
+			#pf-template-modal:not(.is-open) { display: none !important; }
+			#pf-preview-modal.is-open,
+			#pf-template-modal.is-open { display: flex !important; }
+		</style>
 		<div class="pf-preview-modal" id="pf-preview-modal" style="display:none;">
 			<div class="pf-preview-modal-inner">
 				<div class="pf-preview-modal-header">
