@@ -106,7 +106,8 @@ jQuery(function ($) {
 		var label = field.label || '(bez naziva)';
 		var req   = field.required ? ' <span class="pf-required-mark">*</span>' : '';
 
-		// Generiraj condition atribute za SVaki tip polja
+		// U builderu polja s uvjetom NISU skrivena — uvijek vidljiva za uređivanje.
+		// (display:none za uvjete primjenjuje se samo u Pregledu/frontendu)
 		var condAttrs = '';
 		if (field.condition && field.condition.field) {
 			condAttrs = ' data-cond-field="' + escapeAttr(field.condition.field) + '"'
@@ -114,8 +115,8 @@ jQuery(function ($) {
 			          + ' data-cond-value="' + escapeAttr(field.condition.value || '') + '"';
 		}
 
-		// Inicijalno sakrij polja s uvjetom (evaluatePreviewConditions će ih otkriti kad treba)
-		var initialStyle = condAttrs ? ' style="display:none;"' : '';
+		// VAŽNO: u builderu NIKAD ne skrivaj polje — uvijek prazan style
+		var initialStyle = '';
 
 		if (field.type === 'html') {
 			return '<div class="pf-field pf-field-html"' + condAttrs + initialStyle + '>'
@@ -304,6 +305,10 @@ jQuery(function ($) {
 
 		if (field.required) {
 			$toolbar.append('<span class="pf-bf-required-badge">obavezno</span>');
+		}
+
+		if (field.condition && field.condition.field) {
+			$toolbar.append('<span class="pf-bf-cond-badge" title="Polje ima uvjetnu logiku">uvjetno</span>');
 		}
 
 		var $clone = $('<button type="button" class="pf-bf-clone" title="Dupliciraj polje"><span class="dashicons dashicons-admin-page"></span></button>');
