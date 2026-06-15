@@ -1,0 +1,43 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'   # Trigerira se kad pusham tag kao 1.6.4
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create plugin ZIP
+        run: |
+          cd ..
+          zip -rq perkovic-forms.zip perkovic-forms \
+            --exclude "*.git*" \
+            --exclude "*/.github/*" \
+            --exclude "*/.DS_Store" \
+            --exclude "*/release.sh" \
+            --exclude "*/*.log"
+          echo "ZIP created: $(du -sh perkovic-forms.zip)"
+
+      - name: Create GitHub Release with ZIP
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Perkovic Forms ${{ steps.version.outputs.VERSION }}"
+          body: |
+            ## Perkovic Forms ${{ steps.version.outputs.VERSION }}
+
+            Instaliraj ažuriranje direktno iz WordPress admin panela:
+            **Dodaci → Perkovic Forms → Ažuriraj**
+          files: ../perkovic-forms.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
