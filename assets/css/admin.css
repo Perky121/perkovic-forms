@@ -1147,88 +1147,91 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
    ============================================================ */
 
 /* ===========================================================
-   Theme Editor Tab — novi layout
+   Theme Editor Tab
    =========================================================== */
 
 .pf-theme-layout {
-	display: grid;
-	grid-template-columns: 280px 1fr;
-	gap: 0;
-	height: calc(100vh - 130px);
+	display: flex;
+	flex-direction: row;
+	min-height: 600px;
 }
 
-/* Sidebar */
+/* Sidebar — fiksna širina, scroll unutar */
 .pf-theme-sidebar {
-	background: #fff;
-	border-right: 1px solid #DDD4C8;
+	width: 260px;
+	flex-shrink: 0;
+	background: #FAFAF9;
+	border-right: 1px solid #E5DFD8;
 	overflow-y: auto;
-	padding: 16px;
+	padding: 12px;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 8px;
 }
 
 .pf-theme-block {
-	border: 1px solid #EFEAE2;
+	background: #fff;
+	border: 1px solid #E5DFD8;
 	border-radius: 8px;
 	overflow: hidden;
-	background: #fff;
 }
 
 .pf-theme-block-title {
 	font-size: 10px;
 	font-weight: 700;
 	text-transform: uppercase;
-	letter-spacing: 0.08em;
+	letter-spacing: 0.07em;
 	color: #9C9182;
-	padding: 9px 12px 7px;
-	border-bottom: 1px solid #EFEAE2;
-	background: #FBF8F4;
+	padding: 8px 12px;
+	background: #F7F3EF;
+	border-bottom: 1px solid #E5DFD8;
 }
 
 /* Preset grid */
 .pf-preset-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 6px;
-	padding: 10px;
+	gap: 5px;
+	padding: 8px;
 }
 
 .pf-preset-card {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 5px;
-	padding: 8px 6px;
-	border: 1.5px solid #EFEAE2;
+	gap: 4px;
+	padding: 7px 5px;
+	border: 1.5px solid #E5DFD8;
 	border-radius: 6px;
 	background: #fff;
 	cursor: pointer;
-	transition: border-color 0.12s, box-shadow 0.12s;
+	transition: border-color 0.12s;
 }
 
-.pf-preset-card:hover { border-color: #B5654A; }
-.pf-preset-card.is-active { border-color: #B5654A; box-shadow: 0 0 0 2px rgba(181,101,74,0.12); }
+.pf-preset-card:hover,
+.pf-preset-card.is-active {
+	border-color: #B5654A;
+}
 
 .pf-preset-swatch {
 	display: flex;
-	width: 40px;
-	height: 20px;
-	border-radius: 4px;
+	width: 36px;
+	height: 18px;
+	border-radius: 3px;
 	overflow: hidden;
 	border: 1px solid rgba(0,0,0,0.08);
 }
 
 .pf-preset-swatch span { display: block; flex: 1; }
-.pf-preset-label { font-size: 10px; font-weight: 600; color: #2B2420; }
+.pf-preset-label { font-size: 9px; font-weight: 600; color: #6B5F58; }
 
 /* Color rows */
 .pf-color-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 7px 12px;
-	border-bottom: 1px solid #EFEAE2;
+	padding: 6px 10px;
+	border-bottom: 1px solid #F0EAE2;
 }
 
 .pf-color-row:last-child { border-bottom: none; }
@@ -1245,43 +1248,46 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 }
 
 .pf-color-input {
-	width: 28px;
-	height: 28px;
+	width: 26px;
+	height: 26px;
 	border: 1px solid #DDD4C8;
 	border-radius: 4px;
 	padding: 2px;
 	cursor: pointer;
 	flex-shrink: 0;
+	background: none;
 }
 
 .pf-color-text {
-	width: 64px;
+	width: 62px;
 	font-size: 11px;
 	font-family: monospace;
-	padding: 4px 6px;
+	padding: 3px 5px;
 	border: 1px solid #DDD4C8;
 	border-radius: 4px;
+	color: #2B2420;
 }
 
-/* Font select */
+/* Font select full width */
 .pf-select-full {
 	display: block;
 	width: 100%;
-	margin: 0;
 	border: none;
 	border-radius: 0;
 	padding: 9px 12px;
-	font-size: 13px;
+	font-size: 12px;
 	background: #fff;
+	color: #2B2420;
+	cursor: pointer;
 }
 
-/* Option rows */
+/* Option rows (zaobljenost, stil, visina...) */
 .pf-theme-option-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 8px 12px;
-	border-bottom: 1px solid #EFEAE2;
+	padding: 7px 10px;
+	border-bottom: 1px solid #F0EAE2;
 	font-size: 12px;
 	color: #2B2420;
 }
@@ -1291,33 +1297,34 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 .pf-range-wrap {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 6px;
 }
 
 .pf-range-input {
-	width: 90px;
+	width: 80px;
 	accent-color: #B5654A;
+	cursor: pointer;
 }
 
 .pf-range-val {
 	font-size: 11px;
-	font-weight: 600;
+	font-weight: 700;
 	color: #B5654A;
-	min-width: 28px;
+	min-width: 26px;
 	text-align: right;
 }
 
-/* Toggle groups */
+/* Toggle grupe (Normal / CAPS / Light itd.) */
 .pf-toggle-group {
 	display: flex;
 	gap: 2px;
-	background: #F4EEE4;
-	border-radius: 6px;
-	padding: 3px;
+	background: #EDE8E1;
+	border-radius: 5px;
+	padding: 2px;
 }
 
 .pf-toggle-opt {
-	padding: 4px 9px;
+	padding: 3px 8px;
 	font-size: 11px;
 	font-weight: 600;
 	border: none;
@@ -1325,34 +1332,37 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 	background: none;
 	cursor: pointer;
 	color: #9C9182;
-	transition: background 0.12s, color 0.12s;
+	transition: background 0.1s, color 0.1s;
 	white-space: nowrap;
+	line-height: 1.4;
 }
 
 .pf-toggle-opt.is-active {
 	background: #fff;
 	color: #2B2420;
-	box-shadow: 0 1px 3px rgba(43,36,32,0.08);
+	box-shadow: 0 1px 2px rgba(43,36,32,0.10);
 }
 
-/* Preview col */
+/* Preview kolona */
 .pf-theme-preview-col {
-	background: #F0EBE4;
+	flex: 1;
+	min-width: 0;
+	background: #EDE8E1;
 	display: flex;
 	flex-direction: column;
-	overflow: hidden;
 }
 
 .pf-theme-preview-label {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 12px 20px;
+	padding: 10px 20px;
 	font-size: 12px;
 	font-weight: 700;
 	color: #2B2420;
 	background: #fff;
 	border-bottom: 1px solid #DDD4C8;
+	flex-shrink: 0;
 }
 
 .pf-theme-preview-note {
@@ -1364,18 +1374,14 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 .pf-theme-preview-frame {
 	flex: 1;
 	overflow-y: auto;
-	padding: 40px 20px;
-	display: flex;
-	align-items: flex-start;
-	justify-content: center;
+	padding: 32px 24px;
 }
 
 .pf-theme-preview-frame > div {
-	width: 100%;
-	max-width: 500px;
-	box-shadow: 0 4px 24px rgba(43,36,32,0.10);
+	max-width: 480px;
+	margin: 0 auto;
+	box-shadow: 0 4px 20px rgba(43,36,32,0.10);
 	border-radius: 10px;
-	overflow: hidden;
 }
 
 
