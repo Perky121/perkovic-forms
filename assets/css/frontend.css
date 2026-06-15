@@ -1075,3 +1075,155 @@
 .pf-form .pf-file-item-remove:hover {
 	color: #C44545;
 }
+
+/* ---- Email / Tel — input s ikonom ---- */
+.pf-form .pf-input-icon-wrap {
+	position: relative;
+}
+
+.pf-form .pf-input-with-icon {
+	padding-left: 42px !important;
+}
+
+.pf-form .pf-input-icon {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	align-items: center;
+	color: #C9BBA8;
+	pointer-events: none;
+	transition: color 0.15s;
+}
+
+.pf-form .pf-input-icon-left { left: 14px; }
+
+.pf-form .pf-input-icon-wrap:focus-within .pf-input-icon {
+	color: var(--pf-primary, #B5654A);
+}
+
+/* ---- Datum ---- */
+.pf-form .pf-date-wrap {
+	position: relative;
+}
+
+.pf-form .pf-date-input {
+	display: block;
+	width: 100%;
+	padding: 11px 14px 11px 42px;
+	font-family: 'Montserrat', sans-serif;
+	font-size: 14px;
+	font-weight: 500;
+	border: 1.5px solid var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 6px);
+	background: var(--pf-input-bg, #FAF8F6);
+	color: var(--pf-text, #1A1614);
+	outline: none;
+	transition: border-color 0.15s, box-shadow 0.15s;
+	-webkit-appearance: none;
+	appearance: none;
+	box-sizing: border-box;
+	letter-spacing: 0.04em;
+}
+
+.pf-form .pf-date-input:focus {
+	border-color: var(--pf-primary, #B5654A);
+	background: #fff;
+	box-shadow: 0 0 0 3px rgba(181,101,74,0.10);
+}
+
+.pf-form .pf-date-icon {
+	position: absolute;
+	left: 14px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #C9BBA8;
+	pointer-events: none;
+	display: flex;
+	align-items: center;
+	transition: color 0.15s;
+}
+
+.pf-form .pf-date-wrap:focus-within .pf-date-icon {
+	color: var(--pf-primary, #B5654A);
+}
+
+/* ---- Rating (ocjena na skali) ---- */
+.pf-form .pf-rating-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.pf-form .pf-rating-buttons {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.pf-form .pf-rating-btn {
+	width: 44px;
+	height: 44px;
+	border-radius: var(--pf-radius, 6px);
+	border: 1.5px solid var(--pf-border, #DDD4C8);
+	background: var(--pf-input-bg, #FAF8F6);
+	color: var(--pf-text, #2B2420);
+	font-family: 'Montserrat', sans-serif;
+	font-size: 14px;
+	font-weight: 700;
+	cursor: pointer;
+	transition: border-color 0.12s, background 0.12s, color 0.12s, transform 0.1s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	padding: 0;
+}
+
+/* > 10 gumba — manji */
+.pf-form .pf-rating-wrap[data-max="11"] .pf-rating-btn,
+.pf-form .pf-rating-wrap[data-max="12"] .pf-rating-btn,
+.pf-form .pf-rating-wrap[data-max="13"] .pf-rating-btn,
+.pf-form .pf-rating-wrap[data-max="14"] .pf-rating-btn,
+.pf-form .pf-rating-wrap[data-max="15"] .pf-rating-btn,
+.pf-form .pf-rating-wrap[data-max="16"] .pf-rating-btn,
+.pf-form .pf-rating-wrap[data-max="17"] .pf-rating-btn,
+.pf-form .pf-rating-wrap[data-max="18"] .pf-rating-btn,
+.pf-form .pf-rating-wrap[data-max="19"] .pf-rating-btn,
+.pf-form .pf-rating-wrap[data-max="20"] .pf-rating-btn {
+	width: 36px;
+	height: 36px;
+	font-size: 12px;
+	gap: 4px;
+}
+
+.pf-form .pf-rating-btn:hover,
+.pf-form .pf-rating-btn.is-hover {
+	border-color: var(--pf-primary, #B5654A);
+	background: #FBF6F4;
+	color: var(--pf-primary, #B5654A);
+}
+
+.pf-form .pf-rating-btn.is-selected {
+	border-color: var(--pf-primary, #B5654A);
+	background: #F5EAE5;
+	color: var(--pf-primary, #B5654A);
+}
+
+.pf-form .pf-rating-btn.is-active {
+	background: var(--pf-primary, #B5654A);
+	border-color: var(--pf-primary, #B5654A);
+	color: #fff;
+	transform: scale(1.1);
+	box-shadow: 0 2px 8px rgba(181,101,74,0.25);
+}
+
+.pf-form .pf-rating-labels {
+	display: flex;
+	justify-content: space-between;
+	font-size: 11px;
+	font-weight: 600;
+	color: #9C9182;
+	letter-spacing: 0.02em;
+	padding: 0 2px;
+}

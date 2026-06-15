@@ -767,7 +767,52 @@
 			syncChecked();
 		});
 
-		// File drop zone
+		// Date mask DD/MM/YYYY
+		form.querySelectorAll('.pf-date-input').forEach(function (inp) {
+			inp.addEventListener('input', function () {
+				var v = inp.value.replace(/\D/g, '').substring(0, 8);
+				var out = '';
+				if (v.length > 0) out += v.substring(0, 2);
+				if (v.length >= 3) out += '/' + v.substring(2, 4);
+				if (v.length >= 5) out += '/' + v.substring(4, 8);
+				inp.value = out;
+			});
+			inp.addEventListener('keydown', function (e) {
+				if (e.key === 'Backspace' && inp.value.endsWith('/')) {
+					inp.value = inp.value.slice(0, -1);
+					e.preventDefault();
+				}
+			});
+		});
+
+		// Rating buttons
+		form.querySelectorAll('.pf-rating-wrap').forEach(function (wrap) {
+			var hidden = wrap.querySelector('input[type="hidden"]');
+			var btns   = wrap.querySelectorAll('.pf-rating-btn');
+			btns.forEach(function (btn) {
+				btn.addEventListener('click', function () {
+					var val = btn.getAttribute('data-value');
+					if (hidden) hidden.value = val;
+					btns.forEach(function (b) {
+						var bv = parseInt(b.getAttribute('data-value'), 10);
+						var cv = parseInt(val, 10);
+						b.classList.toggle('is-active',   bv === cv);
+						b.classList.toggle('is-selected', bv <= cv);
+					});
+					// Trigger change za auto-advance
+					wrap.dispatchEvent(new Event('change', { bubbles: true }));
+				});
+				btn.addEventListener('mouseenter', function () {
+					var hv = parseInt(btn.getAttribute('data-value'), 10);
+					btns.forEach(function (b) {
+						b.classList.toggle('is-hover', parseInt(b.getAttribute('data-value'), 10) <= hv);
+					});
+				});
+				btn.addEventListener('mouseleave', function () {
+					btns.forEach(function (b) { b.classList.remove('is-hover'); });
+				});
+			});
+		});
 		document.querySelectorAll('.pf-file-zone').forEach(function (zone) {
 			var input    = zone.querySelector('.pf-file-input');
 			var dropArea = zone.querySelector('.pf-file-droparea');

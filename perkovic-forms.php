@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.8.2
+ * Version: 1.8.3
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.8.2' );
+define( 'PF_VERSION', '1.8.3' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -790,6 +790,9 @@ function pf_sanitize_field( $f ) {
 		'multiple'      => ! empty( $f['multiple'] ),
 		'options'       => isset( $f['options'] ) && is_array( $f['options'] ) ? array_map( 'sanitize_text_field', $f['options'] ) : array(),
 		'condition'     => $condition,
+		'max_rating'    => isset( $f['max_rating'] ) ? max( 2, min( 20, intval( $f['max_rating'] ) ) ) : 10,
+		'label_low'     => isset( $f['label_low'] )  ? sanitize_text_field( $f['label_low'] )  : '',
+		'label_high'    => isset( $f['label_high'] ) ? sanitize_text_field( $f['label_high'] ) : '',
 	);
 }
 
@@ -970,8 +973,8 @@ function pf_render_forms_list_page() {
 
 function pf_field_groups() {
 	return array(
-		'Osnovna polja' => array( 'text', 'email', 'tel', 'number', 'textarea' ),
-		'Izbori'        => array( 'select', 'radio', 'checkbox', 'image_choice' ),
+		'Osnovna polja' => array( 'text', 'email', 'tel', 'number', 'date', 'textarea' ),
+		'Izbori'        => array( 'select', 'radio', 'checkbox', 'image_choice', 'rating' ),
 		'Ostalo'        => array( 'file', 'section_divider', 'hidden', 'html' ),
 	);
 }
@@ -1800,6 +1803,8 @@ function pf_field_types() {
 		'email'          => 'Email',
 		'tel'            => 'Telefon',
 		'number'         => 'Broj',
+		'date'           => 'Datum',
+		'rating'         => 'Ocjena (skala)',
 		'textarea'       => 'Tekstualno polje',
 		'select'         => 'Padajući izbornik',
 		'radio'          => 'Radio gumbi',
@@ -1826,6 +1831,8 @@ function pf_field_icons_map() {
 		'email'           => 'dashicons-email',
 		'tel'             => 'dashicons-phone',
 		'number'          => 'dashicons-calculator',
+		'date'            => 'dashicons-calendar-alt',
+		'rating'          => 'dashicons-star-filled',
 		'textarea'        => 'dashicons-text-page',
 		'select'          => 'dashicons-menu-alt',
 		'radio'           => 'dashicons-marker',
@@ -2730,7 +2737,72 @@ function pf_render_frontend_field( $field ) {
 				</div>
 				<?php break;
 
-			default : // text, email, tel, number
+			case 'date' :
+				?>
+				<div class="pf-date-wrap">
+					<input type="text"
+					       id="<?php echo esc_attr( $field_id ); ?>"
+					       name="<?php echo esc_attr( $name ); ?>"
+					       class="pf-date-input"
+					       placeholder="DD/MM/YYYY"
+					       maxlength="10"
+					       autocomplete="off"
+					       value="<?php echo esc_attr( $default_value ); ?>"
+					       <?php echo $req_attr; ?>>
+					<span class="pf-date-icon">
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M1 7h14" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+					</span>
+				</div>
+				<?php break;
+
+			case 'rating' :
+				$max_rating   = ! empty( $field['max_rating'] ) ? intval( $field['max_rating'] ) : 10;
+				$label_low    = ! empty( $field['label_low'] )  ? $field['label_low']  : '1 – Nije mi važno';
+				$label_high   = ! empty( $field['label_high'] ) ? $field['label_high'] : $max_rating . ' – Presudno mi je';
+				?>
+				<div class="pf-rating-wrap" data-max="<?php echo esc_attr( $max_rating ); ?>">
+					<input type="hidden" id="<?php echo esc_attr( $field_id ); ?>" name="<?php echo esc_attr( $name ); ?>" value="" <?php echo $req_attr; ?>>
+					<div class="pf-rating-buttons">
+						<?php for ( $r = 1; $r <= $max_rating; $r++ ) : ?>
+							<button type="button" class="pf-rating-btn" data-value="<?php echo esc_attr( $r ); ?>"><?php echo esc_html( $r ); ?></button>
+						<?php endfor; ?>
+					</div>
+					<div class="pf-rating-labels">
+						<span class="pf-rating-label-low"><?php echo esc_html( $label_low ); ?></span>
+						<span class="pf-rating-label-high"><?php echo esc_html( $label_high ); ?></span>
+					</div>
+				</div>
+				<?php break;
+
+			case 'email' :
+				?>
+				<div class="pf-input-icon-wrap">
+					<input type="email" id="<?php echo esc_attr( $field_id ); ?>" name="<?php echo esc_attr( $name ); ?>"
+					       placeholder="<?php echo esc_attr( $placeholder ?: 'ime@domena.com' ); ?>"
+					       value="<?php echo esc_attr( $default_value ); ?>"
+					       class="pf-input-with-icon"
+					       <?php echo $req_attr; ?>>
+					<span class="pf-input-icon pf-input-icon-left">
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M1 5.5l7 4 7-4" stroke="currentColor" stroke-width="1.5"/></svg>
+					</span>
+				</div>
+				<?php break;
+
+			case 'tel' :
+				?>
+				<div class="pf-input-icon-wrap">
+					<input type="tel" id="<?php echo esc_attr( $field_id ); ?>" name="<?php echo esc_attr( $name ); ?>"
+					       placeholder="<?php echo esc_attr( $placeholder ?: '+385 9X XXX XXXX' ); ?>"
+					       value="<?php echo esc_attr( $default_value ); ?>"
+					       class="pf-input-with-icon"
+					       <?php echo $req_attr; ?>>
+					<span class="pf-input-icon pf-input-icon-left">
+						<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2h3l1.5 3.5-2 1.5c1 2 2.5 3.5 4.5 4.5l1.5-2L15 11v3c0 .5-.5 1-1 1C5 15 1 8 1 3c0-.5.5-1 1-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+					</span>
+				</div>
+				<?php break;
+
+			default : // text, number i ostalo
 				$input_type = in_array( $type, array( 'email', 'tel', 'number' ), true ) ? $type : 'text';
 				?>
 				<input type="<?php echo esc_attr( $input_type ); ?>" id="<?php echo esc_attr( $field_id ); ?>" name="<?php echo esc_attr( $name ); ?>" placeholder="<?php echo esc_attr( $placeholder ); ?>" value="<?php echo esc_attr( $default_value ); ?>" <?php echo $req_attr; ?>>

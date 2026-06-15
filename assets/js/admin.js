@@ -205,8 +205,34 @@ jQuery(function ($) {
 				}
 				break;
 
+			case 'date':
+				html += '<div class="pf-date-wrap"><input type="text" disabled placeholder="DD/MM/YYYY" class="pf-date-input"><span class="pf-date-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M1 7h14" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>';
+				break;
+
+			case 'rating':
+				var maxR = field.max_rating || 10;
+				var lowL = field.label_low  || '1 – minimum';
+				var higL = field.label_high || maxR + ' – maksimum';
+				html += '<div class="pf-rating-wrap" data-max="' + maxR + '">';
+				html += '<div class="pf-rating-buttons">';
+				for (var ri = 1; ri <= maxR; ri++) {
+					html += '<button type="button" class="pf-rating-btn" disabled>' + ri + '</button>';
+				}
+				html += '</div>';
+				html += '<div class="pf-rating-labels"><span class="pf-rating-label-low">' + escapeHtml(lowL) + '</span><span class="pf-rating-label-high">' + escapeHtml(higL) + '</span></div>';
+				html += '</div>';
+				break;
+
+			case 'email':
+				html += '<div class="pf-input-icon-wrap"><span class="pf-input-icon pf-input-icon-left"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M1 5.5l7 4 7-4" stroke="currentColor" stroke-width="1.5"/></svg></span><input type="email" disabled placeholder="' + escapeAttr(field.placeholder || 'ime@domena.com') + '" class="pf-input-with-icon"></div>';
+				break;
+
+			case 'tel':
+				html += '<div class="pf-input-icon-wrap"><span class="pf-input-icon pf-input-icon-left"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2h3l1.5 3.5-2 1.5c1 2 2.5 3.5 4.5 4.5l1.5-2L15 11v3c0 .5-.5 1-1 1C5 15 1 8 1 3c0-.5.5-1 1-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><input type="tel" disabled placeholder="' + escapeAttr(field.placeholder || '+385 9X XXX XXXX') + '" class="pf-input-with-icon"></div>';
+				break;
+
 			default:
-				var inputType = ['email', 'tel', 'number'].indexOf(field.type) > -1 ? field.type : 'text';
+				var inputType = field.type === 'number' ? 'number' : 'text';
 				html += '<input type="' + inputType + '" disabled placeholder="' + escapeAttr(field.placeholder || '') + '">';
 		}
 
@@ -288,8 +314,23 @@ jQuery(function ($) {
 					+ '<p class="pf-file-sub-text">PDF, JPG, DWG, DXF, IFC, ZIP &middot; max 10 datoteka &middot; 20 MB po datoteci</p>'
 					+ '</div></div>';
 				break;
+			case 'date':
+				h += '<div class="pf-date-wrap"><input type="text" name="' + escapeAttr(field.name) + '" placeholder="DD/MM/YYYY" maxlength="10" autocomplete="off" class="pf-date-input"><span class="pf-date-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M1 7h14" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span></div>';
+				break;
+			case 'rating':
+				var maxRp = field.max_rating || 10;
+				h += '<div class="pf-rating-wrap" data-max="' + maxRp + '"><input type="hidden" name="' + escapeAttr(field.name) + '"><div class="pf-rating-buttons">';
+				for (var rp = 1; rp <= maxRp; rp++) h += '<button type="button" class="pf-rating-btn" data-value="' + rp + '">' + rp + '</button>';
+				h += '</div><div class="pf-rating-labels"><span class="pf-rating-label-low">' + escapeHtml(field.label_low || '1 – minimum') + '</span><span class="pf-rating-label-high">' + escapeHtml(field.label_high || maxRp + ' – maksimum') + '</span></div></div>';
+				break;
+			case 'email':
+				h += '<div class="pf-input-icon-wrap"><span class="pf-input-icon pf-input-icon-left"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M1 5.5l7 4 7-4" stroke="currentColor" stroke-width="1.5"/></svg></span><input type="email" name="' + escapeAttr(field.name) + '" placeholder="' + escapeAttr(field.placeholder || 'ime@domena.com') + '" class="pf-input-with-icon"></div>';
+				break;
+			case 'tel':
+				h += '<div class="pf-input-icon-wrap"><span class="pf-input-icon pf-input-icon-left"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2h3l1.5 3.5-2 1.5c1 2 2.5 3.5 4.5 4.5l1.5-2L15 11v3c0 .5-.5 1-1 1C5 15 1 8 1 3c0-.5.5-1 1-1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><input type="tel" name="' + escapeAttr(field.name) + '" placeholder="' + escapeAttr(field.placeholder || '+385 9X XXX XXXX') + '" class="pf-input-with-icon"></div>';
+				break;
 			default:
-				var it = ['email', 'tel', 'number'].indexOf(field.type) > -1 ? field.type : 'text';
+				var it = field.type === 'number' ? 'number' : 'text';
 				h += '<input type="' + it + '" name="' + escapeAttr(field.name) + '" placeholder="' + escapeAttr(field.placeholder || '') + '">';
 		}
 		return h + '</div>';
@@ -1327,14 +1368,40 @@ jQuery(function ($) {
 			}
 		}
 
-		// Default vrijednost (za text/email/tel/number/textarea/select)
-		if (['text', 'email', 'tel', 'number', 'textarea', 'select'].indexOf(field.type) > -1) {
+		// Default vrijednost (za text/email/tel/number/textarea/select/date)
+		if (['text', 'email', 'tel', 'number', 'date', 'textarea', 'select'].indexOf(field.type) > -1) {
 			var $defVal = $('<input type="text">').val(field.default_value || '');
 			$defVal.on('input', function () {
 				field.default_value = $(this).val();
 				updateCardPreview(field);
 			});
 			$panelTarget.append(panelRow('Default vrijednost', $defVal));
+		}
+
+		// Rating opcije
+		if (field.type === 'rating') {
+			if (!field.max_rating) field.max_rating = 10;
+			if (!field.label_low)  field.label_low  = '1 – Nije mi važno';
+			if (!field.label_high) field.label_high = field.max_rating + ' – Presudno mi je';
+
+			var $maxR = $('<input type="number" min="2" max="20" step="1">').val(field.max_rating);
+			$maxR.on('input', function () {
+				field.max_rating = Math.max(2, Math.min(20, parseInt($(this).val()) || 10));
+				if (!field.label_high || field.label_high.match(/^\d+/)) {
+					field.label_high = field.max_rating + ' – Presudno mi je';
+					$labelHigh.val(field.label_high);
+				}
+				updateCardPreview(field);
+			});
+			$panelTarget.append(panelRow('Maksimalna ocjena (2–20)', $maxR));
+
+			var $labelLow = $('<input type="text" placeholder="npr. 1 – Nije mi važno">').val(field.label_low);
+			$labelLow.on('input', function () { field.label_low = $(this).val(); });
+			$panelTarget.append(panelRow('Oznaka lijevo (minimum)', $labelLow));
+
+			var $labelHigh = $('<input type="text" placeholder="npr. 10 – Presudno mi je">').val(field.label_high);
+			$labelHigh.on('input', function () { field.label_high = $(this).val(); });
+			$panelTarget.append(panelRow('Oznaka desno (maksimum)', $labelHigh));
 		}
 
 		// Premjesti na stranicu (samo ako ima više stranica)
