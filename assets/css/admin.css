@@ -670,6 +670,13 @@
 .pf-bf-preview {
 	padding: 14px;
 	pointer-events: none;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.pf-bf-preview * {
+	pointer-events: none !important;
+	cursor: default !important;
 }
 
 .pf-bf-preview .pf-field {

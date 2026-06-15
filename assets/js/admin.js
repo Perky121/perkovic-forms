@@ -164,14 +164,13 @@ jQuery(function ($) {
 
 		switch (field.type) {
 			case 'textarea':
-				html += '<textarea name="' + escapeAttr(field.name) + '" placeholder="' + escapeAttr(field.placeholder) + '"></textarea>';
+				html += '<textarea disabled placeholder="' + escapeAttr(field.placeholder || '') + '"></textarea>';
 				break;
 
 			case 'select':
-				html += '<select name="' + escapeAttr(field.name) + '">'
-					+ '<option value="">Odaberite...</option>';
+				html += '<select disabled><option value="">' + (field.placeholder || 'Odaberite...') + '</option>';
 				(field.options || []).forEach(function (o) {
-					html += '<option value="' + escapeAttr(o) + '">' + escapeHtml(o) + '</option>';
+					html += '<option>' + escapeHtml(o) + '</option>';
 				});
 				html += '</select>';
 				break;
@@ -179,9 +178,7 @@ jQuery(function ($) {
 			case 'radio':
 				html += '<fieldset><legend>' + escapeHtml(label) + req + '</legend>';
 				(field.options || []).forEach(function (o) {
-					html += '<label class="pf-inline-option">'
-						+ '<input type="radio" name="' + escapeAttr(field.name) + '" value="' + escapeAttr(o) + '"> '
-						+ escapeHtml(o) + '</label>';
+					html += '<label class="pf-inline-option"><input type="radio" disabled> ' + escapeHtml(o) + '</label>';
 				});
 				html += '</fieldset>';
 				break;
@@ -189,9 +186,7 @@ jQuery(function ($) {
 			case 'checkbox':
 				html += '<fieldset><legend>' + escapeHtml(label) + req + '</legend>';
 				(field.options || []).forEach(function (o) {
-					html += '<label class="pf-inline-option">'
-						+ '<input type="checkbox" name="' + escapeAttr(field.name) + '[]" value="' + escapeAttr(o) + '"> '
-						+ escapeHtml(o) + '</label>';
+					html += '<label class="pf-inline-option"><input type="checkbox" disabled> ' + escapeHtml(o) + '</label>';
 				});
 				html += '</fieldset>';
 				break;
@@ -205,16 +200,87 @@ jQuery(function ($) {
 
 			default:
 				var inputType = ['email', 'tel', 'number'].indexOf(field.type) > -1 ? field.type : 'text';
-				html += '<input type="' + inputType + '" name="' + escapeAttr(field.name) + '" placeholder="' + escapeAttr(field.placeholder) + '">';
+				html += '<input type="' + inputType + '" disabled placeholder="' + escapeAttr(field.placeholder || '') + '">';
 		}
 
 		html += '</div>';
 		return html;
 	}
 
-	/* ---------------------------------------------------------
-	 *  Canvas rendering
-	 * --------------------------------------------------------- */
+	// Preview modal koristi interaktivne inpute (za conditional logic evaluaciju)
+	function buildPreviewFieldHTML(field) {
+		var label = field.label || '(bez naziva)';
+		var req   = field.required ? ' <span class="pf-required-mark">*</span>' : '';
+
+		var condAttrs = '';
+		if (field.condition && field.condition.field) {
+			condAttrs = ' data-cond-field="' + escapeAttr(field.condition.field) + '"'
+			          + ' data-cond-op="'    + escapeAttr(field.condition.operator || 'equals') + '"'
+			          + ' data-cond-value="' + escapeAttr(field.condition.value || '') + '"';
+		}
+		var initialStyle = condAttrs ? ' style="display:none;"' : '';
+
+		if (field.type === 'html') {
+			return '<div class="pf-field pf-field-html"' + condAttrs + initialStyle + '>' + (field.placeholder || '') + '</div>';
+		}
+		if (field.type === 'hidden') return '';
+		if (field.type === 'section_divider') {
+			var h = '<div class="pf-field pf-field-section-divider"' + condAttrs + initialStyle + '>';
+			if (label) h += '<div class="pf-divider-title">' + escapeHtml(label) + '</div>';
+			h += '<div class="pf-divider-line"></div>';
+			if (field.placeholder) h += '<div class="pf-divider-desc">' + escapeHtml(field.placeholder) + '</div>';
+			return h + '</div>';
+		}
+		if (field.type === 'image_choice') {
+			var h = '<div class="pf-field pf-field-image-choice"' + condAttrs + initialStyle + '><fieldset><legend>' + escapeHtml(label) + req + '</legend><div class="pf-image-choice-grid">';
+			(field.options || []).forEach(function (opt) {
+				var parts = opt.split('|');
+				var ol = (parts[0] || '').trim(), oi = (parts[1] || '').trim();
+				h += '<label class="pf-image-choice-item"><input type="checkbox" name="' + escapeAttr(field.name) + '[]" value="' + escapeAttr(ol) + '">';
+				h += '<span class="pf-image-choice-card">';
+				h += oi ? '<span class="pf-image-choice-img" style="background-image:url(\'' + escapeAttr(oi) + '\')"></span>'
+				        : '<span class="pf-image-choice-icon"><span class="dashicons dashicons-format-image"></span></span>';
+				h += '<span class="pf-image-choice-label">' + escapeHtml(ol) + '</span></span></label>';
+			});
+			return h + '</div></fieldset></div>';
+		}
+
+		var h = '<div class="pf-field pf-field-' + field.type + '"' + condAttrs + initialStyle + '>';
+		if (field.type !== 'checkbox' && field.type !== 'radio') {
+			h += '<label>' + escapeHtml(label) + req + '</label>';
+		}
+		switch (field.type) {
+			case 'textarea':
+				h += '<textarea name="' + escapeAttr(field.name) + '" placeholder="' + escapeAttr(field.placeholder || '') + '"></textarea>';
+				break;
+			case 'select':
+				h += '<select name="' + escapeAttr(field.name) + '"><option value="">Odaberite...</option>';
+				(field.options || []).forEach(function (o) { h += '<option value="' + escapeAttr(o) + '">' + escapeHtml(o) + '</option>'; });
+				h += '</select>';
+				break;
+			case 'radio':
+				h += '<fieldset><legend>' + escapeHtml(label) + req + '</legend>';
+				(field.options || []).forEach(function (o) {
+					h += '<label class="pf-inline-option"><input type="radio" name="' + escapeAttr(field.name) + '" value="' + escapeAttr(o) + '"> ' + escapeHtml(o) + '</label>';
+				});
+				h += '</fieldset>';
+				break;
+			case 'checkbox':
+				h += '<fieldset><legend>' + escapeHtml(label) + req + '</legend>';
+				(field.options || []).forEach(function (o) {
+					h += '<label class="pf-inline-option"><input type="checkbox" name="' + escapeAttr(field.name) + '[]" value="' + escapeAttr(o) + '"> ' + escapeHtml(o) + '</label>';
+				});
+				h += '</fieldset>';
+				break;
+			case 'file':
+				h += '<input type="file" disabled>';
+				break;
+			default:
+				var it = ['email', 'tel', 'number'].indexOf(field.type) > -1 ? field.type : 'text';
+				h += '<input type="' + it + '" name="' + escapeAttr(field.name) + '" placeholder="' + escapeAttr(field.placeholder || '') + '">';
+		}
+		return h + '</div>';
+	}
 	function indexFields() {
 		fieldsByUid = {};
 		allFieldsFlat().forEach(function (f) {
@@ -981,6 +1047,10 @@ jQuery(function ($) {
 
 	function renderTemplateModal() {
 		var $modal = $('#pf-template-modal');
+		if ( $modal.parent()[0] !== document.body ) {
+			$modal.appendTo('body');
+		}
+		var $modal = $('#pf-template-modal');
 		var $list  = $modal.find('.pf-template-list').empty();
 
 		var keys = Object.keys(pfTemplates);
@@ -1100,7 +1170,7 @@ jQuery(function ($) {
 					html += '<div class="pf-col">';
 					cell.forEach(function (f) {
 						if (f.type !== 'hidden') {
-							html += renderFieldPreviewHTML(f);
+							html += buildPreviewFieldHTML(f);
 						}
 					});
 					html += '</div>';
@@ -1153,9 +1223,13 @@ jQuery(function ($) {
 	});
 
 	$('#pf-preview-btn').on('click', function () {
+		// Premjesti modal na body kako bi izbjegao WP admin overflow:hidden problem
+		var $modal = $('#pf-preview-modal');
+		if ( $modal.parent()[0] !== document.body ) {
+			$modal.appendTo('body');
+		}
 		$('#pf-preview-frame').html(buildPreviewHTML());
-		$('#pf-preview-modal').addClass('is-open');
-		// Evaluiraj uvjete odmah pri otvaranju
+		$modal.addClass('is-open');
 		evaluatePreviewConditions($('#pf-preview-frame')[0]);
 	});
 
