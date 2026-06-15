@@ -692,135 +692,130 @@ jQuery(function ($) {
 		return nums[i] || String(i + 1);
 	}
 
-	function renderTabs() {
-		var $tabs = $('#pf-steps-tabs').empty();
-		var stepNumbers = computeStepNumbers();
+	function buildStepTab(step, i, stepNumbers) {
+		if (!step.hasOwnProperty('enabled'))   step.enabled   = true;
+		if (!step.hasOwnProperty('label'))     step.label     = '';
+		if (!step.hasOwnProperty('condition')) step.condition = null;
 
-		pfSteps.forEach(function (step, i) {
-			if (!step.hasOwnProperty('enabled'))   step.enabled   = true;
-			if (!step.hasOwnProperty('label'))     step.label     = '';
-			if (!step.hasOwnProperty('condition')) step.condition = null;
+		var isActive   = (i === activeStep);
+		var isDisabled = (step.enabled === false);
+		var hasCond    = (step.condition && (step.condition.field || (step.condition.rules && step.condition.rules.length)));
 
-			var isActive   = (i === activeStep);
-			var isDisabled = (step.enabled === false);
-			var hasCond    = (step.condition && (step.condition.field || (step.condition.rules && step.condition.rules.length)));
+		var cls = 'pf-step-tab';
+		if (step.isSubpage) cls += ' is-subpage';
+		if (isActive)   cls += ' is-active';
+		if (isDisabled) cls += ' is-disabled';
+		if (hasCond)    cls += ' has-condition';
 
-			var cls = 'pf-step-tab';
-			if (step.isSubpage) cls += ' is-subpage';
-			if (isActive)   cls += ' is-active';
-			if (isDisabled) cls += ' is-disabled';
-			if (hasCond)    cls += ' has-condition';
+		var $tab = $('<div class="' + cls + '" data-step-index="' + i + '" draggable="true"></div>');
 
-			var $tab = $('<div class="' + cls + '" data-step-index="' + i + '" draggable="true"></div>');
-
-			// Label (editable na dblclick) — s brojem prefiksom
-			var displayLabel = (step.label && step.label.trim())
-				? step.label.trim()
-				: 'Stranica ' + stepNumbers[i];
-			var $label = $('<span class="pf-step-tab-label"><span class="pf-step-tab-num">' + escapeHtml(stepNumbers[i]) + '</span> ' + escapeHtml(displayLabel) + '</span>');
-			$label.on('dblclick', function (e) {
-				e.stopPropagation();
-				var $input = $('<input type="text" class="pf-step-tab-rename" value="' + escapeAttr(step.label || '') + '" placeholder="Stranica ' + stepNumbers[i] + '">');
-				$(this).replaceWith($input);
-				$input.focus().select();
-				function commitRename() {
-					var val = $input.val().trim();
-					step.label = val;
-					renderTabs();
-				}
-				$input.on('blur', commitRename);
-				$input.on('keydown', function (e) {
-					if (e.key === 'Enter') { commitRename(); }
-					if (e.key === 'Escape') { renderTabs(); }
-				});
+		var displayLabel = (step.label && step.label.trim())
+			? step.label.trim()
+			: 'Stranica ' + stepNumbers[i];
+		var $label = $('<span class="pf-step-tab-label"><span class="pf-step-tab-num">' + escapeHtml(stepNumbers[i]) + '</span> ' + escapeHtml(displayLabel) + '</span>');
+		$label.on('dblclick', function (e) {
+			e.stopPropagation();
+			var $input = $('<input type="text" class="pf-step-tab-rename" value="' + escapeAttr(step.label || '') + '" placeholder="Stranica ' + stepNumbers[i] + '">');
+			$(this).replaceWith($input);
+			$input.focus().select();
+			function commitRename() { step.label = $input.val().trim(); renderTabs(); }
+			$input.on('blur', commitRename);
+			$input.on('keydown', function (e) {
+				if (e.key === 'Enter') commitRename();
+				if (e.key === 'Escape') renderTabs();
 			});
-			$tab.append($label);
+		});
+		$tab.append($label);
 
-			// Gumb: dodaj pod-stranicu (samo na glavnim stranicama)
-			if (!step.isSubpage) {
-				var $addSub = $('<button type="button" class="pf-step-tab-addsub dashicons dashicons-plus" title="Dodaj pod-stranicu"></button>');
-				$addSub.on('click', function (e) {
-					e.stopPropagation();
-					// Pronađi gdje završava ova grupa (zadnja pod-stranica ovog parenta)
-					var insertAt = i + 1;
-					while (insertAt < pfSteps.length && pfSteps[insertAt].isSubpage) {
-						insertAt++;
-					}
-					pfSteps.splice(insertAt, 0, { rows: [{ cols: 1, cells: [[]] }], label: '', enabled: true, condition: null, isSubpage: true });
-					activeStep = insertAt;
-					renderCanvas();
-				});
-				$tab.append($addSub);
-			}
-
-			// Badge: uvjetno
-			if (hasCond) {
-				$tab.append('<span class="pf-step-badge pf-step-badge-cond" title="Stranica ima uvjetno prikazivanje">uvjetno</span>');
-			}
-
-			// Toggle enabled
-			var $toggle = $('<button type="button" class="pf-step-tab-toggle dashicons ' + (isDisabled ? 'dashicons-hidden' : 'dashicons-visibility') + '" title="' + (isDisabled ? 'Stranica isključena — klikni za uključivanje' : 'Stranica uključena — klikni za isključivanje') + '"></button>');
-			$toggle.on('click', function (e) {
+		if (!step.isSubpage) {
+			var $addSub = $('<button type="button" class="pf-step-tab-addsub dashicons dashicons-plus" title="Dodaj pod-stranicu"></button>');
+			$addSub.on('click', function (e) {
 				e.stopPropagation();
-				step.enabled = (step.enabled === false) ? true : false;
-				renderTabs();
-			});
-			$tab.append($toggle);
-
-			// Uvjet za stranicu
-			var $condBtn = $('<button type="button" class="pf-step-tab-cond dashicons dashicons-filter" title="Uvjetno prikazivanje stranice"></button>');
-			$condBtn.on('click', function (e) {
-				e.stopPropagation();
-				openStepConditionPanel(step, i);
-			});
-			$tab.append($condBtn);
-
-			// Obriši
-			if (pfSteps.length > 1) {
-				var $x = $('<button type="button" class="pf-step-tab-close dashicons dashicons-no-alt" title="Obriši stranicu"></button>');
-				$x.on('click', function (e) {
-					e.stopPropagation();
-					deleteStep(step);
-				});
-				$tab.append($x);
-			}
-
-			// Klik za navigaciju
-			$tab.on('click', function () {
-				activeStep = i;
+				var insertAt = i + 1;
+				while (insertAt < pfSteps.length && pfSteps[insertAt].isSubpage) insertAt++;
+				pfSteps.splice(insertAt, 0, { rows: [{ cols: 1, cells: [[]] }], label: '', enabled: true, condition: null, isSubpage: true });
+				activeStep = insertAt;
 				renderCanvas();
 			});
+			$tab.append($addSub);
+		}
 
-			// Drag & drop reorder
-			$tab.on('dragstart', function (e) {
-				e.originalEvent.dataTransfer.setData('text/plain', i);
-				$(this).addClass('pf-tab-dragging');
-			});
-			$tab.on('dragend', function () {
-				$(this).removeClass('pf-tab-dragging');
-				$('.pf-step-tab').removeClass('pf-tab-dragover');
-			});
-			$tab.on('dragover', function (e) {
-				e.preventDefault();
-				$('.pf-step-tab').removeClass('pf-tab-dragover');
-				$(this).addClass('pf-tab-dragover');
-			});
-			$tab.on('drop', function (e) {
-				e.preventDefault();
-				var fromIdx = parseInt(e.originalEvent.dataTransfer.getData('text/plain'), 10);
-				var toIdx   = parseInt($(this).data('step-index'), 10);
-				$(this).removeClass('pf-tab-dragover');
-				if (fromIdx === toIdx || isNaN(fromIdx) || isNaN(toIdx)) return;
-				// Premjesti step
-				var moved = pfSteps.splice(fromIdx, 1)[0];
-				pfSteps.splice(toIdx, 0, moved);
-				activeStep = toIdx;
-				renderCanvas();
-			});
+		if (hasCond) {
+			$tab.append('<span class="pf-step-badge pf-step-badge-cond" title="Stranica ima uvjetno prikazivanje">uvjetno</span>');
+		}
 
-			$tabs.append($tab);
+		var $toggle = $('<button type="button" class="pf-step-tab-toggle dashicons ' + (isDisabled ? 'dashicons-hidden' : 'dashicons-visibility') + '" title="' + (isDisabled ? 'Stranica isključena' : 'Stranica uključena') + '"></button>');
+		$toggle.on('click', function (e) {
+			e.stopPropagation();
+			step.enabled = (step.enabled === false) ? true : false;
+			renderTabs();
+		});
+		$tab.append($toggle);
+
+		var $condBtn = $('<button type="button" class="pf-step-tab-cond dashicons dashicons-filter" title="Uvjetno prikazivanje stranice"></button>');
+		$condBtn.on('click', function (e) {
+			e.stopPropagation();
+			openStepConditionPanel(step, i);
+		});
+		$tab.append($condBtn);
+
+		if (pfSteps.length > 1) {
+			var $x = $('<button type="button" class="pf-step-tab-close dashicons dashicons-no-alt" title="Obriši stranicu"></button>');
+			$x.on('click', function (e) { e.stopPropagation(); deleteStep(step); });
+			$tab.append($x);
+		}
+
+		$tab.on('click', function () { activeStep = i; renderCanvas(); });
+
+		// Drag & drop reorder
+		$tab.on('dragstart', function (e) {
+			e.originalEvent.dataTransfer.setData('text/plain', i);
+			$(this).addClass('pf-tab-dragging');
+		});
+		$tab.on('dragend', function () {
+			$(this).removeClass('pf-tab-dragging');
+			$('.pf-step-tab').removeClass('pf-tab-dragover');
+		});
+		$tab.on('dragover', function (e) {
+			e.preventDefault();
+			$('.pf-step-tab').removeClass('pf-tab-dragover');
+			$(this).addClass('pf-tab-dragover');
+		});
+		$tab.on('drop', function (e) {
+			e.preventDefault();
+			var fromIdx = parseInt(e.originalEvent.dataTransfer.getData('text/plain'), 10);
+			var toIdx   = parseInt($(this).data('step-index'), 10);
+			$(this).removeClass('pf-tab-dragover');
+			if (fromIdx === toIdx || isNaN(fromIdx) || isNaN(toIdx)) return;
+			var moved = pfSteps.splice(fromIdx, 1)[0];
+			pfSteps.splice(toIdx, 0, moved);
+			activeStep = toIdx;
+			renderCanvas();
 		});
 
+		return $tab;
+	}
+
+	// Pronađi glavnu stranicu (parent) za dani indeks
+	function getParentMainIndex(idx) {
+		for (var j = idx; j >= 0; j--) {
+			if (!pfSteps[j].isSubpage) return j;
+		}
+		return 0;
+	}
+
+	function renderTabs() {
+		var $tabs = $('#pf-steps-tabs').empty();
+		var $subTabs = $('#pf-substeps-tabs').empty();
+		var stepNumbers = computeStepNumbers();
+
+		// Red 1: glavne stranice
+		pfSteps.forEach(function (step, i) {
+			if (step.isSubpage) return;
+			$tabs.append(buildStepTab(step, i, stepNumbers));
+		});
+
+		// Gumb: dodaj glavnu stranicu
 		var $add = $('<button type="button" class="pf-step-tab-add" title="Dodaj glavnu stranicu"><span class="dashicons dashicons-plus-alt2"></span></button>');
 		$add.on('click', function () {
 			pfSteps.push({ rows: [{ cols: 1, cells: [[]] }], label: '', enabled: true, condition: null, isSubpage: false });
@@ -828,6 +823,24 @@ jQuery(function ($) {
 			renderCanvas();
 		});
 		$tabs.append($add);
+
+		// Red 2: pod-stranice aktivne glavne grupe
+		var activeMainIdx = getParentMainIndex(activeStep);
+		var subPages = [];
+		for (var k = activeMainIdx + 1; k < pfSteps.length && pfSteps[k].isSubpage; k++) {
+			subPages.push(k);
+		}
+
+		if (subPages.length > 0) {
+			var nums = stepNumbers;
+			$subTabs.append('<span class="pf-substeps-label">Pod-stranice ' + escapeHtml(nums[activeMainIdx]) + ':</span>');
+			subPages.forEach(function (idx) {
+				$subTabs.append(buildStepTab(pfSteps[idx], idx, stepNumbers));
+			});
+			$subTabs.show();
+		} else {
+			$subTabs.hide();
+		}
 	}
 
 	// Panel za uvjet stranice — otvori se u desnom panelu
@@ -1805,27 +1818,6 @@ jQuery(function ($) {
 		return html;
 	}
 
-	// Preview navigacija (delegirana)
-	$(document).on('click', '.pf-preview-next', function () {
-		var frame = $('#pf-preview-frame')[0];
-		var panels = Array.prototype.slice.call(frame.querySelectorAll('.pf-step-panel'));
-		var curIdx = panels.findIndex(function (p) { return p.classList.contains('is-active'); });
-		if (curIdx === -1) return;
-		var nextIdx = findPreviewVisibleStep(frame, panels, curIdx, +1);
-		if (nextIdx === -1) return;
-		gotoPreviewStep(frame, panels, nextIdx);
-	});
-
-	$(document).on('click', '.pf-preview-prev', function () {
-		var frame = $('#pf-preview-frame')[0];
-		var panels = Array.prototype.slice.call(frame.querySelectorAll('.pf-step-panel'));
-		var curIdx = panels.findIndex(function (p) { return p.classList.contains('is-active'); });
-		if (curIdx === -1) return;
-		var prevIdx = findPreviewVisibleStep(frame, panels, curIdx, -1);
-		if (prevIdx === -1) return;
-		gotoPreviewStep(frame, panels, prevIdx);
-	});
-
 	function gotoPreviewStep(frame, panels, targetIdx) {
 		panels.forEach(function (p, i) { p.classList.toggle('is-active', i === targetIdx); });
 		var targetStep = parseInt(panels[targetIdx].getAttribute('data-step'), 10);
@@ -1837,32 +1829,114 @@ jQuery(function ($) {
 		});
 	}
 
+	function getPreviewDoc() {
+		var iframe = document.getElementById('pf-preview-frame');
+		return iframe ? (iframe.contentDocument || iframe.contentWindow.document) : null;
+	}
+
+	function writePreviewIframe(isMobile) {
+		var iframe = document.getElementById('pf-preview-frame');
+		if (!iframe) return null;
+		var cssUrl = (window.pfAdminCfg && window.pfAdminCfg.frontendCssUrl) || '';
+		var bodyHtml = buildPreviewHTML();
+		var doc = iframe.contentDocument || iframe.contentWindow.document;
+		doc.open();
+		doc.write(
+			'<!DOCTYPE html><html><head><meta charset="utf-8">' +
+			'<meta name="viewport" content="width=device-width, initial-scale=1">' +
+			(cssUrl ? '<link rel="stylesheet" href="' + cssUrl + '">' : '') +
+			'<style>html,body{margin:0;padding:24px;background:#fff;font-family:Montserrat,sans-serif;}' +
+			'body{max-width:' + (isMobile ? '380px' : '600px') + ';margin:0 auto;}</style>' +
+			'</head><body>' + bodyHtml + '</body></html>'
+		);
+		doc.close();
+		return doc;
+	}
+
 	$('#pf-preview-btn').on('click', function () {
 		var $modal = $('#pf-preview-modal');
 		if ( $modal.parent()[0] !== document.body ) {
 			$modal.appendTo('body');
 		}
-		$('#pf-preview-frame').html(buildPreviewHTML());
 		$modal.css('display', '').addClass('is-open');
-		var frame = $('#pf-preview-frame')[0];
-		evaluatePreviewConditions(frame);
-		syncPreviewChecked(frame);
-		updatePreviewStepButtons(frame);
+
+		var isMobile = $('#pf-preview-frame').hasClass('is-mobile');
+		var doc = writePreviewIframe(isMobile);
+		if (!doc) return;
+
+		// Pričekaj da se CSS učita pa evaluiraj
+		setTimeout(function () {
+			evaluatePreviewConditions(doc);
+			syncPreviewChecked(doc);
+			updatePreviewStepButtons(doc);
+			bindPreviewEvents(doc);
+		}, 60);
 	});
 
-	// Re-evaluiraj pri svakoj promjeni unutar previewa + is-checked klasa
-	$(document).on('change', '#pf-preview-frame', function () {
-		var frame = $('#pf-preview-frame')[0];
-		evaluatePreviewConditions(frame);
-		syncPreviewChecked(frame);
-		updatePreviewStepButtons(frame);
-		checkPreviewAutoAdvance(frame);
-	});
-	$(document).on('input', '#pf-preview-frame', function () {
-		var frame = $('#pf-preview-frame')[0];
-		evaluatePreviewConditions(frame);
-		updatePreviewStepButtons(frame);
-	});
+	function bindPreviewEvents(doc) {
+		if (!doc || !doc.body) return;
+
+		doc.body.addEventListener('change', function () {
+			evaluatePreviewConditions(doc);
+			syncPreviewChecked(doc);
+			updatePreviewStepButtons(doc);
+			checkPreviewAutoAdvance(doc);
+		});
+		doc.body.addEventListener('input', function () {
+			evaluatePreviewConditions(doc);
+			updatePreviewStepButtons(doc);
+		});
+
+		// Navigacija
+		doc.body.addEventListener('click', function (e) {
+			var nextBtn = e.target.closest('.pf-preview-next');
+			var prevBtn = e.target.closest('.pf-preview-prev');
+			var ratingBtn = e.target.closest('.pf-rating-btn');
+
+			if (nextBtn) {
+				var panels = Array.prototype.slice.call(doc.querySelectorAll('.pf-step-panel'));
+				var curIdx = panels.findIndex(function (p) { return p.classList.contains('is-active'); });
+				if (curIdx === -1) return;
+				var nextIdx = findPreviewVisibleStep(doc, panels, curIdx, +1);
+				if (nextIdx === -1) return;
+				gotoPreviewStep(doc, panels, nextIdx);
+			} else if (prevBtn) {
+				var panels2 = Array.prototype.slice.call(doc.querySelectorAll('.pf-step-panel'));
+				var curIdx2 = panels2.findIndex(function (p) { return p.classList.contains('is-active'); });
+				if (curIdx2 === -1) return;
+				var prevIdx = findPreviewVisibleStep(doc, panels2, curIdx2, -1);
+				if (prevIdx === -1) return;
+				gotoPreviewStep(doc, panels2, prevIdx);
+			} else if (ratingBtn) {
+				// Rating klik unutar iframe
+				var wrap = ratingBtn.closest('.pf-rating-wrap');
+				var hidden = wrap.querySelector('input[type="hidden"]');
+				var val = ratingBtn.getAttribute('data-value');
+				if (hidden) hidden.value = val;
+				wrap.querySelectorAll('.pf-rating-btn').forEach(function (b) {
+					var bv = parseInt(b.getAttribute('data-value'), 10);
+					var cv = parseInt(val, 10);
+					b.classList.toggle('is-active', bv === cv);
+					b.classList.toggle('is-selected', bv <= cv);
+				});
+				evaluatePreviewConditions(doc);
+				updatePreviewStepButtons(doc);
+				checkPreviewAutoAdvance(doc);
+			}
+		});
+
+		// Date mask unutar iframe
+		doc.querySelectorAll('.pf-date-input').forEach(function (inp) {
+			inp.addEventListener('input', function () {
+				var v = inp.value.replace(/\D/g, '').substring(0, 8);
+				var out = '';
+				if (v.length > 0) out += v.substring(0, 2);
+				if (v.length >= 3) out += '/' + v.substring(2, 4);
+				if (v.length >= 5) out += '/' + v.substring(4, 8);
+				inp.value = out;
+			});
+		});
+	}
 
 	function checkPreviewAutoAdvance(frame) {
 		if (!frame) return;
@@ -2036,7 +2110,20 @@ jQuery(function ($) {
 	$('.pf-preview-device-btn').on('click', function () {
 		$('.pf-preview-device-btn').removeClass('is-active');
 		$(this).addClass('is-active');
-		$('#pf-preview-frame').toggleClass('is-mobile', $(this).data('device') === 'mobile');
+		var isMobile = $(this).data('device') === 'mobile';
+		$('#pf-preview-frame').toggleClass('is-mobile', isMobile);
+		// Ako je modal otvoren, ponovno iscrtaj iframe s novom širinom
+		if ($('#pf-preview-modal').hasClass('is-open')) {
+			var doc = writePreviewIframe(isMobile);
+			if (doc) {
+				setTimeout(function () {
+					evaluatePreviewConditions(doc);
+					syncPreviewChecked(doc);
+					updatePreviewStepButtons(doc);
+					bindPreviewEvents(doc);
+				}, 60);
+			}
+		}
 	});
 
 	/* ---------------------------------------------------------

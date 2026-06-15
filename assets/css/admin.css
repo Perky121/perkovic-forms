@@ -418,6 +418,28 @@
 	display: flex;
 	align-items: center;
 	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.pf-substeps-tabs {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-top: 8px;
+	padding: 8px 10px;
+	background: #F7F3EF;
+	border-radius: 8px;
+	border: 1px dashed #DDD4C8;
+}
+
+.pf-substeps-label {
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #9C7A68;
+	margin-right: 4px;
 }
 
 .pf-step-tab {
@@ -1564,194 +1586,20 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 
 .pf-preview-frame {
 	width: 100%;
-	max-width: 600px;
+	max-width: 640px;
+	height: 70vh;
+	min-height: 480px;
 	background: #fff;
+	border: none;
 	border-radius: 10px;
-	padding: 32px;
 	box-shadow: 0 4px 16px rgba(43,36,32,0.06);
 	transition: max-width 0.2s ease;
+	display: block;
 }
 
-/* Reset WP admin CSS interference */
-.pf-preview-frame,
-.pf-preview-frame * {
-	box-sizing: border-box;
+.pf-preview-frame.is-mobile {
+	max-width: 400px;
 }
-
-/* Step dots — override WP admin li/div styles */
-.pf-preview-frame .pf-step-dot {
-	width: 30px !important;
-	height: 30px !important;
-	min-width: 30px !important;
-	min-height: 30px !important;
-	max-width: 30px !important;
-	max-height: 30px !important;
-	border-radius: 50% !important;
-	background: #E8E2DC !important;
-	color: #9C9182 !important;
-	display: flex !important;
-	align-items: center !important;
-	justify-content: center !important;
-	font-weight: 700 !important;
-	font-size: 12px !important;
-	line-height: 1 !important;
-	flex-shrink: 0 !important;
-	padding: 0 !important;
-	margin: 0 !important;
-	border: none !important;
-	list-style: none !important;
-	font-family: 'Montserrat', sans-serif !important;
-}
-
-.pf-preview-frame .pf-step-dot.is-active,
-.pf-preview-frame .pf-step-dot.is-complete {
-	background: #B5654A !important;
-	color: #fff !important;
-}
-
-.pf-preview-frame .pf-steps-indicator {
-	display: flex !important;
-	align-items: center !important;
-	margin-bottom: 24px !important;
-	padding: 0 !important;
-	background: none !important;
-	border: none !important;
-	list-style: none !important;
-}
-
-.pf-preview-frame .pf-step-line {
-	flex: 1 !important;
-	height: 1px !important;
-	background: #E8E2DC !important;
-	margin: 0 6px !important;
-	border: none !important;
-	min-height: 0 !important;
-}
-
-/* Reset inputs/selects in preview */
-.pf-preview-frame .pf-field input[type="text"],
-.pf-preview-frame .pf-field input[type="email"],
-.pf-preview-frame .pf-field input[type="tel"],
-.pf-preview-frame .pf-field input[type="number"],
-.pf-preview-frame .pf-field textarea,
-.pf-preview-frame .pf-field select {
-	height: auto !important;
-	min-height: 0 !important;
-	max-height: none !important;
-	line-height: 1.5 !important;
-	box-shadow: none !important;
-	outline: none !important;
-	font-family: 'Montserrat', sans-serif !important;
-}
-
-/* Labels/legends */
-.pf-preview-frame .pf-field label {
-	display: block !important;
-	font-size: 14px !important;
-	font-weight: 600 !important;
-	text-transform: none !important;
-	letter-spacing: 0 !important;
-	color: #2B2420 !important;
-	margin-bottom: 6px !important;
-	padding: 0 !important;
-	line-height: 1.4 !important;
-}
-
-.pf-preview-frame .pf-field legend {
-	display: block !important;
-	font-size: 14px !important;
-	font-weight: 600 !important;
-	text-transform: none !important;
-	letter-spacing: 0 !important;
-	color: #2B2420 !important;
-	margin-bottom: 12px !important;
-	padding: 0 !important;
-	width: 100% !important;
-	float: none !important;
-}
-
-/* Fix fieldset */
-.pf-preview-frame fieldset {
-	border: none !important;
-	padding: 0 !important;
-	margin: 0 !important;
-}
-
-/* Inline options */
-.pf-preview-frame .pf-inline-option {
-	display: flex !important;
-	align-items: center !important;
-	gap: 12px !important;
-	padding: 12px 16px !important;
-	margin-bottom: 8px !important;
-	border-radius: 8px !important;
-	border: 1.5px solid #DDD4C8 !important;
-	background: #fff !important;
-	cursor: pointer !important;
-	list-style: none !important;
-	font-size: 14px !important;
-	font-weight: 500 !important;
-	color: #2B2420 !important;
-	line-height: 1.4 !important;
-	transition: border-color 0.12s, background 0.12s, box-shadow 0.12s !important;
-}
-
-.pf-preview-frame .pf-inline-option:hover {
-	border-color: #B5654A !important;
-	background: #FDF9F7 !important;
-}
-
-.pf-preview-frame .pf-inline-option.is-checked {
-	border-color: #B5654A !important;
-	background: #FDF9F7 !important;
-	box-shadow: 0 0 0 2px rgba(181,101,74,0.10) !important;
-}
-
-/* Native checkbox/radio u preview — vrati WP admin izgled na normalu */
-.pf-preview-frame .pf-inline-option input[type="checkbox"],
-.pf-preview-frame .pf-inline-option input[type="radio"] {
-	-webkit-appearance: auto !important;
-	-moz-appearance: auto !important;
-	appearance: auto !important;
-	width: 18px !important;
-	height: 18px !important;
-	min-width: 18px !important;
-	min-height: 18px !important;
-	max-width: 18px !important;
-	max-height: 18px !important;
-	margin: 0 !important;
-	padding: 0 !important;
-	opacity: 1 !important;
-	position: static !important;
-	pointer-events: auto !important;
-	accent-color: #B5654A !important;
-	cursor: pointer !important;
-	flex-shrink: 0 !important;
-	box-shadow: none !important;
-	clip: auto !important;
-}
-
-.pf-preview-frame .pf-inline-option input[type="radio"] {
-	border-radius: 50% !important;
-}
-
-/* Fields */
-.pf-preview-frame .pf-field {
-	margin-bottom: 20px !important;
-	padding: 0 !important;
-	border: none !important;
-	background: none !important;
-}
-
-.pf-preview-frame .pf-step-panel { display: none; }
-.pf-preview-frame .pf-step-panel.is-active { display: block !important; }
-.pf-preview-frame .pf-step-actions { margin-top: 20px; }
-.pf-preview-frame.is-mobile { max-width: 360px; padding: 20px; }
-.pf-preview-frame.is-mobile .pf-row {
-	flex-direction: column;
-	gap: 0;
-}
-.pf-preview-frame .pf-col.pf-col-hidden { display: none; }
 
 /* ============================================================
    AI ASISTENT TAB
@@ -3184,16 +3032,11 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 
 /* ---- Pod-stranice (sub-page tabs) ---- */
 .pf-step-tab.is-subpage {
-	margin-left: 14px;
 	font-size: 12px;
-	opacity: 0.92;
-}
-
-.pf-step-tab.is-subpage::before {
-	content: '↳';
-	color: #C9BBA8;
-	margin-right: 4px;
-	font-size: 13px;
+	background: #fff;
+	border: 1px solid #E5DFD8;
+	border-radius: 6px;
+	padding: 6px 10px;
 }
 
 .pf-step-tab-num {

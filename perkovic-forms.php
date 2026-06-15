@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.9.0
+ * Version: 1.9.1
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.9.0' );
+define( 'PF_VERSION', '1.9.1' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -480,10 +480,11 @@ function pf_admin_assets( $hook ) {
 		wp_enqueue_script( 'sortablejs', 'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js', array(), '1.15.2', true );
 		wp_enqueue_script( 'pf-admin-js', PF_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery', 'sortablejs' ), PF_VERSION, true );
 		wp_localize_script( 'pf-admin-js', 'pfAdminCfg', array(
-			'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
-			'aiNonce'  => wp_create_nonce( 'pf_ai_chat' ),
-			'aiEnabled'=> (bool) get_option( 'pf_openai_api_key', '' ),
-			'presets'  => pf_theme_presets(),
+			'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+			'aiNonce'        => wp_create_nonce( 'pf_ai_chat' ),
+			'aiEnabled'      => (bool) get_option( 'pf_openai_api_key', '' ),
+			'presets'        => pf_theme_presets(),
+			'frontendCssUrl' => PF_PLUGIN_URL . 'assets/css/frontend.css?v=' . PF_VERSION,
 		) );
 	}
 
@@ -1194,6 +1195,9 @@ function pf_theme_css( $form_id, $theme ) {
 		. "\tbackground-repeat: no-repeat !important;\n"
 		. "\tbackground-position: right 14px center !important;\n"
 		. "}\n"
+		// Email/tel/date inputi s ikonom — prostor lijevo da se ne preklapa
+		. "{$id_sel} .pf-field .pf-input-with-icon { padding-left: 44px !important; }\n"
+		. "{$id_sel} .pf-field .pf-date-input { padding-left: 44px !important; }\n"
 		. "{$id_sel} .pf-field input:focus,\n"
 		. "{$id_sel} .pf-field select:focus,\n"
 		. "{$id_sel} .pf-field textarea:focus {\n"
@@ -1416,6 +1420,7 @@ function pf_render_form_edit_page() {
 					<div class="pf-builder-canvas">
 						<div class="pf-canvas-header">
 							<div id="pf-steps-tabs" class="pf-steps-tabs"></div>
+						<div id="pf-substeps-tabs" class="pf-substeps-tabs"></div>
 							<div class="pf-canvas-actions">
 								<button type="button" class="pf-canvas-action-btn" id="pf-load-template-btn" title="Predlošci">
 									<span class="dashicons dashicons-portfolio"></span>
@@ -1767,7 +1772,7 @@ function pf_render_form_edit_page() {
 					<button type="button" class="pf-preview-close" id="pf-preview-close">&times;</button>
 				</div>
 				<div class="pf-preview-modal-body">
-					<div class="pf-preview-frame" id="pf-preview-frame"></div>
+					<iframe class="pf-preview-frame" id="pf-preview-frame" frameborder="0"></iframe>
 				</div>
 			</div>
 		</div>

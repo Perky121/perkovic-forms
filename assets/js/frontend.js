@@ -839,7 +839,7 @@
 		});
 
 		// Date mask DD/MM/YYYY
-		form.querySelectorAll('.pf-date-input').forEach(function (inp) {
+		document.querySelectorAll('.pf-form .pf-date-input').forEach(function (inp) {
 			inp.addEventListener('input', function () {
 				var v = inp.value.replace(/\D/g, '').substring(0, 8);
 				var out = '';
@@ -857,7 +857,7 @@
 		});
 
 		// Rating buttons
-		form.querySelectorAll('.pf-rating-wrap').forEach(function (wrap) {
+		document.querySelectorAll('.pf-form .pf-rating-wrap').forEach(function (wrap) {
 			var hidden = wrap.querySelector('input[type="hidden"]');
 			var btns   = wrap.querySelectorAll('.pf-rating-btn');
 			btns.forEach(function (btn) {
@@ -884,7 +884,7 @@
 				});
 			});
 		});
-		document.querySelectorAll('.pf-file-zone').forEach(function (zone) {
+		document.querySelectorAll('.pf-form .pf-file-zone').forEach(function (zone) {
 			var input    = zone.querySelector('.pf-file-input');
 			var dropArea = zone.querySelector('.pf-file-droparea');
 			var fileList = zone.querySelector('.pf-file-list');
