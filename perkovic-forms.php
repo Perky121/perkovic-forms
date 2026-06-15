@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.7.3
+ * Version: 1.7.4
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.7.3' );
+define( 'PF_VERSION', '1.7.4' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -759,7 +759,26 @@ function pf_sanitize_form_structure( $structure ) {
 			$clean_rows[] = array( 'cols' => 1, 'cells' => array( array() ) );
 		}
 
-		$clean_steps[] = array( 'rows' => $clean_rows );
+		// Step condition
+		$step_condition = null;
+		if ( isset( $step['condition'] ) && is_array( $step['condition'] ) && ! empty( $step['condition']['field'] ) ) {
+			$op = isset( $step['condition']['operator'] ) ? sanitize_key( $step['condition']['operator'] ) : 'equals';
+			if ( ! in_array( $op, array( 'equals', 'not_equals', 'contains' ), true ) ) {
+				$op = 'equals';
+			}
+			$step_condition = array(
+				'field'    => sanitize_key( $step['condition']['field'] ),
+				'operator' => $op,
+				'value'    => isset( $step['condition']['value'] ) ? sanitize_text_field( $step['condition']['value'] ) : '',
+			);
+		}
+
+		$clean_steps[] = array(
+			'rows'      => $clean_rows,
+			'label'     => isset( $step['label'] ) ? sanitize_text_field( $step['label'] ) : '',
+			'enabled'   => isset( $step['enabled'] ) ? (bool) $step['enabled'] : true,
+			'condition' => $step_condition,
+		);
 	}
 
 	if ( empty( $clean_steps ) ) {
@@ -2396,8 +2415,12 @@ function pf_shortcode_form( $atts ) {
 
 		<?php if ( $total_steps > 1 ) : ?>
 			<div class="pf-steps-indicator">
-				<?php for ( $i = 0; $i < $total_steps; $i++ ) : ?>
-					<div class="pf-step-dot <?php echo $i === 0 ? 'is-active' : ''; ?>" data-step="<?php echo esc_attr( $i + 1 ); ?>">
+				<?php for ( $i = 0; $i < $total_steps; $i++ ) :
+					$step_label = ! empty( $steps[ $i ]['label'] ) ? $steps[ $i ]['label'] : ( 'Korak ' . ( $i + 1 ) );
+				?>
+					<div class="pf-step-dot <?php echo $i === 0 ? 'is-active' : ''; ?>"
+					     data-step="<?php echo esc_attr( $i + 1 ); ?>"
+					     title="<?php echo esc_attr( $step_label ); ?>">
 						<?php echo esc_html( $i + 1 ); ?>
 					</div>
 					<?php if ( $i < $total_steps - 1 ) : ?><div class="pf-step-line"></div><?php endif; ?>
@@ -2405,8 +2428,20 @@ function pf_shortcode_form( $atts ) {
 			</div>
 		<?php endif; ?>
 
-		<?php foreach ( $steps as $i => $step ) : ?>
-			<div class="pf-step-panel <?php echo $i === 0 ? 'is-active' : ''; ?>" data-step="<?php echo esc_attr( $i + 1 ); ?>">
+		<?php foreach ( $steps as $i => $step ) :
+			// Skip isključenih stranica
+			if ( isset( $step['enabled'] ) && $step['enabled'] === false ) continue;
+
+			// Condition data atributi za JS evaluaciju na frontendu
+			$step_cond_attrs = '';
+			if ( ! empty( $step['condition']['field'] ) ) {
+				$step_cond_attrs = ' data-step-cond-field="' . esc_attr( $step['condition']['field'] ) . '"'
+					. ' data-step-cond-op="' . esc_attr( $step['condition']['operator'] ?? 'equals' ) . '"'
+					. ' data-step-cond-value="' . esc_attr( $step['condition']['value'] ?? '' ) . '"';
+			}
+		?>
+			<div class="pf-step-panel <?php echo $i === 0 ? 'is-active' : ''; ?>"
+			     data-step="<?php echo esc_attr( $i + 1 ); ?>"<?php echo $step_cond_attrs; ?>>
 				<?php foreach ( (array) $step['rows'] as $row ) : ?>
 					<?php $cols = isset( $row['cols'] ) ? max( 1, min( 3, intval( $row['cols'] ) ) ) : 1; ?>
 					<div class="pf-row pf-cols-<?php echo esc_attr( $cols ); ?>">

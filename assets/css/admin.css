@@ -423,8 +423,8 @@
 .pf-step-tab {
 	display: flex;
 	align-items: center;
-	gap: 7px;
-	padding: 9px 14px;
+	gap: 5px;
+	padding: 8px 12px;
 	border: none;
 	border-bottom: 2px solid transparent;
 	background: none;
@@ -433,19 +433,80 @@
 	font-weight: 600;
 	cursor: pointer;
 	transition: color 0.12s;
+	user-select: none;
+	position: relative;
 }
+
+.pf-step-tab:hover { color: #2B2420; }
 
 .pf-step-tab.is-active {
 	color: #2B2420;
 	border-bottom-color: #B5654A;
 }
 
-.pf-step-tab-close {
-	font-size: 14px;
-	color: #C9BBA8;
+.pf-step-tab.is-disabled {
+	opacity: 0.5;
 }
 
+.pf-step-tab.has-condition .pf-step-tab-label::after {
+	content: ' ⚡';
+	font-size: 11px;
+}
+
+/* Drag & drop */
+.pf-step-tab.pf-tab-dragging { opacity: 0.4; }
+.pf-step-tab.pf-tab-dragover { border-bottom-color: #B5654A; background: rgba(181,101,74,0.06); }
+
+/* Tab label — dblclick to rename */
+.pf-step-tab-label {
+	cursor: pointer;
+}
+
+.pf-step-tab-rename {
+	font-size: 13px;
+	font-weight: 600;
+	border: 1px solid #B5654A;
+	border-radius: 4px;
+	padding: 2px 6px;
+	color: #2B2420;
+	width: 90px;
+	outline: none;
+}
+
+/* Tab action buttons */
+.pf-step-tab-toggle,
+.pf-step-tab-cond,
+.pf-step-tab-close {
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	font-size: 14px;
+	color: #C9BBA8;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	transition: color 0.12s;
+}
+
+.pf-step-tab-toggle:hover { color: #B5654A; }
+.pf-step-tab-cond:hover { color: #2C5A87; }
 .pf-step-tab-close:hover { color: #C44545; }
+
+/* Badges on tab */
+.pf-step-badge {
+	font-size: 9px;
+	font-weight: 700;
+	padding: 2px 6px;
+	border-radius: 8px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.pf-step-badge-cond {
+	background: #E8EEF5;
+	color: #2C5A87;
+}
 
 .pf-step-tab-add {
 	display: flex;
@@ -459,6 +520,7 @@
 	color: #9C9182;
 	cursor: pointer;
 	transition: color 0.12s, border-color 0.12s;
+	margin-left: 4px;
 }
 
 .pf-step-tab-add:hover {

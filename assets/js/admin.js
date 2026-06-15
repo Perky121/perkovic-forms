@@ -514,19 +514,74 @@ jQuery(function ($) {
 		return $wrap;
 	}
 
+	function getStepLabel(step, i) {
+		return (step.label && step.label.trim()) ? step.label.trim() : ('Stranica ' + (i + 1));
+	}
+
 	function renderTabs() {
 		var $tabs = $('#pf-steps-tabs').empty();
 
 		pfSteps.forEach(function (step, i) {
-			var $tab = $('<div class="pf-step-tab' + (i === activeStep ? ' is-active' : '') + '">Stranica ' + (i + 1) + '</div>');
+			if (!step.hasOwnProperty('enabled'))   step.enabled   = true;
+			if (!step.hasOwnProperty('label'))     step.label     = '';
+			if (!step.hasOwnProperty('condition')) step.condition = null;
 
-			$tab.on('click', function () {
-				activeStep = i;
-				renderCanvas();
+			var isActive   = (i === activeStep);
+			var isDisabled = (step.enabled === false);
+			var hasCond    = (step.condition && step.condition.field);
+
+			var cls = 'pf-step-tab';
+			if (isActive)   cls += ' is-active';
+			if (isDisabled) cls += ' is-disabled';
+			if (hasCond)    cls += ' has-condition';
+
+			var $tab = $('<div class="' + cls + '" data-step-index="' + i + '" draggable="true"></div>');
+
+			// Label (editable na dblclick)
+			var $label = $('<span class="pf-step-tab-label">' + escapeHtml(getStepLabel(step, i)) + '</span>');
+			$label.on('dblclick', function (e) {
+				e.stopPropagation();
+				var $input = $('<input type="text" class="pf-step-tab-rename" value="' + escapeAttr(step.label || '') + '" placeholder="Stranica ' + (i + 1) + '">');
+				$(this).replaceWith($input);
+				$input.focus().select();
+				function commitRename() {
+					var val = $input.val().trim();
+					step.label = val;
+					renderTabs();
+				}
+				$input.on('blur', commitRename);
+				$input.on('keydown', function (e) {
+					if (e.key === 'Enter') { commitRename(); }
+					if (e.key === 'Escape') { renderTabs(); }
+				});
 			});
+			$tab.append($label);
 
+			// Badge: uvjetno
+			if (hasCond) {
+				$tab.append('<span class="pf-step-badge pf-step-badge-cond" title="Stranica ima uvjetno prikazivanje">uvjetno</span>');
+			}
+
+			// Toggle enabled
+			var $toggle = $('<button type="button" class="pf-step-tab-toggle dashicons ' + (isDisabled ? 'dashicons-hidden' : 'dashicons-visibility') + '" title="' + (isDisabled ? 'Stranica isključena — klikni za uključivanje' : 'Stranica uključena — klikni za isključivanje') + '"></button>');
+			$toggle.on('click', function (e) {
+				e.stopPropagation();
+				step.enabled = (step.enabled === false) ? true : false;
+				renderTabs();
+			});
+			$tab.append($toggle);
+
+			// Uvjet za stranicu
+			var $condBtn = $('<button type="button" class="pf-step-tab-cond dashicons dashicons-filter" title="Uvjetno prikazivanje stranice"></button>');
+			$condBtn.on('click', function (e) {
+				e.stopPropagation();
+				openStepConditionPanel(step, i);
+			});
+			$tab.append($condBtn);
+
+			// Obriši
 			if (pfSteps.length > 1) {
-				var $x = $('<span class="pf-step-tab-close dashicons dashicons-no-alt" title="Obriši stranicu"></span>');
+				var $x = $('<button type="button" class="pf-step-tab-close dashicons dashicons-no-alt" title="Obriši stranicu"></button>');
 				$x.on('click', function (e) {
 					e.stopPropagation();
 					deleteStep(step);
@@ -534,16 +589,106 @@ jQuery(function ($) {
 				$tab.append($x);
 			}
 
+			// Klik za navigaciju
+			$tab.on('click', function () {
+				activeStep = i;
+				renderCanvas();
+			});
+
+			// Drag & drop reorder
+			$tab.on('dragstart', function (e) {
+				e.originalEvent.dataTransfer.setData('text/plain', i);
+				$(this).addClass('pf-tab-dragging');
+			});
+			$tab.on('dragend', function () {
+				$(this).removeClass('pf-tab-dragging');
+				$('.pf-step-tab').removeClass('pf-tab-dragover');
+			});
+			$tab.on('dragover', function (e) {
+				e.preventDefault();
+				$('.pf-step-tab').removeClass('pf-tab-dragover');
+				$(this).addClass('pf-tab-dragover');
+			});
+			$tab.on('drop', function (e) {
+				e.preventDefault();
+				var fromIdx = parseInt(e.originalEvent.dataTransfer.getData('text/plain'), 10);
+				var toIdx   = parseInt($(this).data('step-index'), 10);
+				$(this).removeClass('pf-tab-dragover');
+				if (fromIdx === toIdx || isNaN(fromIdx) || isNaN(toIdx)) return;
+				// Premjesti step
+				var moved = pfSteps.splice(fromIdx, 1)[0];
+				pfSteps.splice(toIdx, 0, moved);
+				activeStep = toIdx;
+				renderCanvas();
+			});
+
 			$tabs.append($tab);
 		});
 
 		var $add = $('<button type="button" class="pf-step-tab-add" title="Dodaj stranicu"><span class="dashicons dashicons-plus-alt2"></span></button>');
 		$add.on('click', function () {
-			pfSteps.push({ rows: [{ cols: 1, cells: [[]] }] });
+			pfSteps.push({ rows: [{ cols: 1, cells: [[]] }], label: '', enabled: true, condition: null });
 			activeStep = pfSteps.length - 1;
 			renderCanvas();
 		});
 		$tabs.append($add);
+	}
+
+	// Panel za uvjet stranice — otvori se u desnom panelu
+	function openStepConditionPanel(step, stepIdx) {
+		var allFields = allFieldsFlat().filter(function (f) {
+			return f.type !== 'hidden' && f.type !== 'section_divider' && f.type !== 'html' && f.name;
+		});
+
+		var cond = step.condition || { field: '', operator: 'equals', value: '' };
+
+		var html = '<div class="pf-panel-section">'
+			+ '<div class="pf-panel-section-title">Uvjet za prikaz stranice ' + (stepIdx + 1) + '</div>'
+			+ '<p style="font-size:12px;color:#9C9182;margin:0 0 12px;">Stranica se prikazuje samo kad je uvjet ispunjen. Ostavi prazno da se uvijek prikazuje.</p>'
+
+			+ '<div class="pf-field-group"><label>Polje</label>'
+			+ '<select id="pf-step-cond-field">'
+			+ '<option value="">(bez uvjeta)</option>';
+
+		allFields.forEach(function (f) {
+			html += '<option value="' + escapeAttr(f.name) + '"' + (cond.field === f.name ? ' selected' : '') + '>'
+				+ escapeHtml(f.label || f.name) + '</option>';
+		});
+
+		html += '</select></div>'
+			+ '<div class="pf-field-group"><label>Operator</label>'
+			+ '<select id="pf-step-cond-op">'
+			+ '<option value="equals"' + (cond.operator === 'equals' ? ' selected' : '') + '>jednako</option>'
+			+ '<option value="not_equals"' + (cond.operator === 'not_equals' ? ' selected' : '') + '>nije jednako</option>'
+			+ '<option value="contains"' + (cond.operator === 'contains' ? ' selected' : '') + '>sadrži</option>'
+			+ '</select></div>'
+			+ '<div class="pf-field-group"><label>Vrijednost</label>'
+			+ '<input type="text" id="pf-step-cond-value" value="' + escapeAttr(cond.value || '') + '" placeholder="npr. Da">'
+			+ '</div>'
+			+ '<button type="button" class="button button-primary" id="pf-step-cond-save" style="margin-top:8px;">Spremi uvjet</button>'
+			+ '<button type="button" class="button" id="pf-step-cond-clear" style="margin-top:8px;margin-left:6px;">Ukloni uvjet</button>'
+			+ '</div>';
+
+		$('#pf-field-settings').html(html);
+
+		$('#pf-step-cond-save').on('click', function () {
+			var fieldVal = $('#pf-step-cond-field').val();
+			if (!fieldVal) {
+				step.condition = null;
+			} else {
+				step.condition = {
+					field:    fieldVal,
+					operator: $('#pf-step-cond-op').val(),
+					value:    $('#pf-step-cond-value').val().trim(),
+				};
+			}
+			renderTabs();
+		});
+
+		$('#pf-step-cond-clear').on('click', function () {
+			step.condition = null;
+			renderTabs();
+		});
 	}
 
 	function renderCanvas() {
@@ -1219,8 +1364,9 @@ jQuery(function ($) {
 		if (totalSteps > 1) {
 			html += '<div class="pf-steps-indicator">';
 			pfSteps.forEach(function (step, i) {
-				html += '<div class="pf-step-dot ' + (i === 0 ? 'is-active' : '') + '" data-step="' + (i + 1) + '">' + (i + 1) + '</div>';
-				if (i < totalSteps - 1) html += '<div class="pf-step-line' + (i < 0 ? ' is-complete' : '') + '"></div>';
+				var dotTitle = getStepLabel(step, i);
+				html += '<div class="pf-step-dot ' + (i === 0 ? 'is-active' : '') + '" data-step="' + (i + 1) + '" title="' + escapeAttr(dotTitle) + '">' + (i + 1) + '</div>';
+				if (i < totalSteps - 1) html += '<div class="pf-step-line"></div>';
 			});
 			html += '</div>';
 		}
