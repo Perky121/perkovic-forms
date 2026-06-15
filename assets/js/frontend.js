@@ -615,7 +615,99 @@
 				});
 			}
 			form.addEventListener('change', syncChecked);
-			syncChecked(); // inicijalno stanje
+			syncChecked();
+		});
+
+		// File drop zone
+		document.querySelectorAll('.pf-file-zone').forEach(function (zone) {
+			var input    = zone.querySelector('.pf-file-input');
+			var dropArea = zone.querySelector('.pf-file-droparea');
+			var fileList = zone.querySelector('.pf-file-list');
+			var MAX      = 10;
+			var selectedFiles = [];
+
+			function formatSize(bytes) {
+				if (bytes < 1024)       return bytes + ' B';
+				if (bytes < 1048576)    return (bytes / 1024).toFixed(1) + ' KB';
+				return (bytes / 1048576).toFixed(1) + ' MB';
+			}
+
+			function getIcon(name) {
+				var ext = (name.split('.').pop() || '').toLowerCase();
+				var icons = {
+					pdf:  '📄', jpg: '🖼', jpeg: '🖼', png: '🖼',
+					dwg:  '📐', dxf: '📐', ifc: '🏗',  skp: '🏗',
+					doc:  '📝', docx: '📝',
+					zip:  '🗜',  rar: '🗜',
+				};
+				return icons[ext] || '📎';
+			}
+
+			function renderList() {
+				fileList.innerHTML = '';
+				selectedFiles.forEach(function (file, idx) {
+					var li = document.createElement('li');
+					li.className = 'pf-file-item';
+					li.innerHTML =
+						'<span class="pf-file-item-icon">' + getIcon(file.name) + '</span>' +
+						'<span class="pf-file-item-name">' + file.name + '</span>' +
+						'<span class="pf-file-item-size">' + formatSize(file.size) + '</span>' +
+						'<button type="button" class="pf-file-item-remove" data-idx="' + idx + '" aria-label="Ukloni">&times;</button>';
+					fileList.appendChild(li);
+				});
+				// Ažuriraj FileList na inputu
+				var dt = new DataTransfer();
+				selectedFiles.forEach(function (f) { dt.items.add(f); });
+				input.files = dt.files;
+
+				zone.classList.toggle('has-files', selectedFiles.length > 0);
+				dropArea.querySelector('.pf-file-main-text').style.display = selectedFiles.length >= MAX ? 'none' : '';
+			}
+
+			function addFiles(newFiles) {
+				Array.from(newFiles).forEach(function (f) {
+					if (selectedFiles.length >= MAX) return;
+					// Provjeri duplikate
+					var exists = selectedFiles.some(function (s) { return s.name === f.name && s.size === f.size; });
+					if (!exists) selectedFiles.push(f);
+				});
+				renderList();
+			}
+
+			// Klik na zonu → otvori file picker
+			dropArea.addEventListener('click', function () { input.click(); });
+			dropArea.addEventListener('keydown', function (e) {
+				if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+			});
+
+			// Input change
+			input.addEventListener('change', function () {
+				addFiles(this.files);
+				this.value = '';
+			});
+
+			// Drag & drop
+			dropArea.addEventListener('dragover', function (e) {
+				e.preventDefault();
+				zone.classList.add('is-dragover');
+			});
+			dropArea.addEventListener('dragleave', function () {
+				zone.classList.remove('is-dragover');
+			});
+			dropArea.addEventListener('drop', function (e) {
+				e.preventDefault();
+				zone.classList.remove('is-dragover');
+				addFiles(e.dataTransfer.files);
+			});
+
+			// Ukloni datoteku
+			fileList.addEventListener('click', function (e) {
+				var btn = e.target.closest('.pf-file-item-remove');
+				if (!btn) return;
+				var idx = parseInt(btn.dataset.idx, 10);
+				selectedFiles.splice(idx, 1);
+				renderList();
+			});
 		});
 	});
 })();

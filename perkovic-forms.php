@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.7.5
+ * Version: 1.7.6
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.7.5' );
+define( 'PF_VERSION', '1.7.6' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -510,30 +510,49 @@ function pf_handle_file_upload( $file ) {
 	require_once ABSPATH . 'wp-admin/includes/file.php';
 	require_once ABSPATH . 'wp-admin/includes/image.php';
 
-	$max_size = 10 * MB_IN_BYTES;
+	$max_size = 20 * MB_IN_BYTES; // 20 MB po datoteci
 	if ( $file['size'] > $max_size ) {
-		return new WP_Error( 'pf_file_too_large', 'Datoteka je preveć velika (maks. 10 MB).' );
+		return new WP_Error( 'pf_file_too_large', 'Datoteka je prevelika (maks. 20 MB).' );
 	}
 
 	$allowed_types = array(
+		// Slike
 		'jpg|jpeg|jpe' => 'image/jpeg',
 		'png'          => 'image/png',
 		'gif'          => 'image/gif',
 		'webp'         => 'image/webp',
+		// Dokumenti
 		'pdf'          => 'application/pdf',
 		'doc'          => 'application/msword',
 		'docx'         => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+		// Tehničke datoteke (CAD)
+		'dwg'          => 'application/acad',
+		'dxf'          => 'application/dxf',
+		'ifc'          => 'application/x-step',
+		'skp'          => 'application/vnd.sketchup.skp',
+		'rvt'          => 'application/octet-stream',
+		// Arhive
+		'zip'          => 'application/zip',
+		'rar'          => 'application/x-rar-compressed',
 	);
-
-	$check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'], $allowed_types );
-	if ( empty( $check['ext'] ) || empty( $check['type'] ) ) {
-		return new WP_Error( 'pf_file_type', 'Nedozvoljen tip datoteke. Dozvoljeno: slike, PDF, Word.' );
-	}
 
 	$overrides = array(
 		'test_form' => false,
 		'mimes'     => $allowed_types,
 	);
+
+	// Za DWG/DXF/IFC preskačemo wp_check_filetype_and_ext jer WP ne poznaje te MIME tipove
+	$ext = strtolower( pathinfo( $file['name'], PATHINFO_EXTENSION ) );
+	$technical_exts = array( 'dwg', 'dxf', 'ifc', 'skp', 'rvt', 'zip', 'rar' );
+
+	if ( ! in_array( $ext, $technical_exts, true ) ) {
+		$check = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'], $allowed_types );
+		if ( empty( $check['ext'] ) || empty( $check['type'] ) ) {
+			return new WP_Error( 'pf_file_type', 'Nedozvoljen tip datoteke.' );
+		}
+	} elseif ( ! array_key_exists( $ext, $allowed_types ) ) {
+		return new WP_Error( 'pf_file_type', 'Nedozvoljen tip datoteke.' );
+	}
 
 	$moved = wp_handle_upload( $file, $overrides );
 
@@ -2630,10 +2649,27 @@ function pf_render_frontend_field( $field ) {
 				<?php break;
 
 			case 'file' : ?>
-				<input type="file" id="<?php echo esc_attr( $field_id ); ?>" name="<?php echo esc_attr( $name ); ?>" <?php echo $req_attr; ?> <?php echo ! empty( $placeholder ) ? 'accept="' . esc_attr( $placeholder ) . '"' : ''; ?>>
-				<?php if ( ! empty( $placeholder ) ) : ?>
-					<p class="pf-field-hint">Dozvoljeno: <?php echo esc_html( $placeholder ); ?> (maks. 10 MB)</p>
-				<?php endif; ?>
+				<div class="pf-file-zone" data-field-id="<?php echo esc_attr( $field_id ); ?>">
+					<input type="file"
+					       id="<?php echo esc_attr( $field_id ); ?>"
+					       name="<?php echo esc_attr( $name ); ?>_files[]"
+					       class="pf-file-input"
+					       multiple
+					       accept=".pdf,.jpg,.jpeg,.png,.dwg,.dxf,.ifc,.skp,.doc,.docx,.zip,.rar"
+					       <?php echo $req_attr; ?>
+					       style="display:none;">
+					<div class="pf-file-droparea" role="button" tabindex="0">
+						<div class="pf-file-icon">
+							<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+								<path d="M18 4v18M10 12l8-8 8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+								<path d="M6 26v2a2 2 0 002 2h20a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+							</svg>
+						</div>
+						<p class="pf-file-main-text">Povuci datoteke ovdje ili <span class="pf-file-browse">odaberi s računala</span></p>
+						<p class="pf-file-sub-text">PDF, JPG, DWG, DXF, IFC, ZIP i ostale tehničke datoteke &middot; max 10 datoteka &middot; 20 MB po datoteci</p>
+					</div>
+					<ul class="pf-file-list"></ul>
+				</div>
 				<?php break;
 
 			default : // text, email, tel, number
@@ -2727,26 +2763,59 @@ function pf_handle_submit_form() {
 		}
 
 		if ( $type === 'file' ) {
-			$has_file = isset( $_FILES[ $name ] ) && $_FILES[ $name ]['error'] !== UPLOAD_ERR_NO_FILE;
+			// Provjeri postoji li barem jedna datoteka (multiple upload: name[])
+			$file_name_key = $name . '_files'; // ključ za multiple: pf_field_files[]
+			$is_multiple   = isset( $_FILES[ $name . '_files' ] );
 
-			if ( ! $has_file ) {
-				if ( $required ) {
-					$missing[] = $label;
+			if ( $is_multiple ) {
+				// Multiple upload
+				$files_raw = $_FILES[ $name . '_files' ];
+				$urls = array();
+				$count = is_array( $files_raw['name'] ) ? count( $files_raw['name'] ) : 0;
+
+				if ( $count === 0 || ( $count === 1 && $files_raw['error'][0] === UPLOAD_ERR_NO_FILE ) ) {
+					if ( $required ) $missing[] = $label;
+					$clean_data[ $label ] = '';
+					continue;
 				}
-				$clean_data[ $label ] = '';
-				continue;
-			}
 
-			if ( $_FILES[ $name ]['error'] !== UPLOAD_ERR_OK ) {
-				wp_send_json_error( array( 'message' => 'Greška kod uploada datoteke za polje "' . $label . '".' ), 400 );
+				$count = min( $count, 10 ); // maks 10
+				for ( $fi = 0; $fi < $count; $fi++ ) {
+					if ( $files_raw['error'][ $fi ] === UPLOAD_ERR_NO_FILE ) continue;
+					if ( $files_raw['error'][ $fi ] !== UPLOAD_ERR_OK ) {
+						wp_send_json_error( array( 'message' => 'Greška kod uploada datoteke "' . esc_html( $files_raw['name'][ $fi ] ) . '".' ), 400 );
+					}
+					$single = array(
+						'name'     => $files_raw['name'][ $fi ],
+						'type'     => $files_raw['type'][ $fi ],
+						'tmp_name' => $files_raw['tmp_name'][ $fi ],
+						'error'    => $files_raw['error'][ $fi ],
+						'size'     => $files_raw['size'][ $fi ],
+					);
+					$uploaded = pf_handle_file_upload( $single );
+					if ( is_wp_error( $uploaded ) ) {
+						wp_send_json_error( array( 'message' => $uploaded->get_error_message() ), 400 );
+					}
+					$urls[] = $uploaded;
+				}
+				$clean_data[ $label ] = implode( "\n", $urls );
+			} else {
+				// Single upload (backward compat)
+				$has_file = isset( $_FILES[ $name ] ) && $_FILES[ $name ]['error'] !== UPLOAD_ERR_NO_FILE;
+				if ( ! $has_file ) {
+					if ( $required ) $missing[] = $label;
+					$clean_data[ $label ] = '';
+					continue;
+				}
+				if ( $_FILES[ $name ]['error'] !== UPLOAD_ERR_OK ) {
+					wp_send_json_error( array( 'message' => 'Greška kod uploada datoteke za polje "' . $label . '".' ), 400 );
+				}
+				$uploaded = pf_handle_file_upload( $_FILES[ $name ] );
+				if ( is_wp_error( $uploaded ) ) {
+					wp_send_json_error( array( 'message' => $uploaded->get_error_message() ), 400 );
+				}
+				$clean_data[ $label ] = $uploaded;
 			}
-
-			$uploaded = pf_handle_file_upload( $_FILES[ $name ] );
-			if ( is_wp_error( $uploaded ) ) {
-				wp_send_json_error( array( 'message' => $uploaded->get_error_message() ), 400 );
-			}
-
-			$clean_data[ $label ] = $uploaded;
 			continue;
 		}
 

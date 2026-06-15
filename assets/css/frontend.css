@@ -951,3 +951,113 @@
 
 /* Honeypot */
 .pf-form .pf-hp { display: none; }
+
+/* ---- File upload drop zone ---- */
+.pf-form .pf-file-zone {
+	font-family: 'Montserrat', sans-serif;
+}
+
+.pf-form .pf-file-droparea {
+	border: 2px dashed var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 8px);
+	background: var(--pf-input-bg, #FAF8F6);
+	padding: 28px 20px;
+	text-align: center;
+	cursor: pointer;
+	transition: border-color 0.15s ease, background 0.15s ease;
+	outline: none;
+}
+
+.pf-form .pf-file-droparea:hover,
+.pf-form .pf-file-zone.is-dragover .pf-file-droparea {
+	border-color: var(--pf-primary, #B5654A);
+	background: #FDF9F7;
+}
+
+.pf-form .pf-file-icon {
+	color: var(--pf-border, #C9BBA8);
+	margin-bottom: 10px;
+}
+
+.pf-form .pf-file-zone.is-dragover .pf-file-icon {
+	color: var(--pf-primary, #B5654A);
+}
+
+.pf-form .pf-file-main-text {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--pf-text, #2B2420);
+	margin: 0 0 6px;
+}
+
+.pf-form .pf-file-browse {
+	color: var(--pf-primary, #B5654A);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.pf-form .pf-file-sub-text {
+	font-size: 11px;
+	font-weight: 500;
+	color: #9C9182;
+	margin: 0;
+	letter-spacing: 0.02em;
+}
+
+/* Lista odabranih datoteka */
+.pf-form .pf-file-list {
+	list-style: none;
+	padding: 0;
+	margin: 8px 0 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.pf-form .pf-file-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background: #fff;
+	border: 1px solid var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 6px);
+	padding: 9px 12px;
+	font-size: 13px;
+}
+
+.pf-form .pf-file-item-icon {
+	font-size: 18px;
+	flex-shrink: 0;
+	line-height: 1;
+}
+
+.pf-form .pf-file-item-name {
+	flex: 1;
+	font-weight: 600;
+	color: var(--pf-text, #2B2420);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.pf-form .pf-file-item-size {
+	font-size: 11px;
+	color: #9C9182;
+	flex-shrink: 0;
+}
+
+.pf-form .pf-file-item-remove {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: #C9BBA8;
+	font-size: 18px;
+	line-height: 1;
+	padding: 0;
+	flex-shrink: 0;
+	transition: color 0.12s;
+}
+
+.pf-form .pf-file-item-remove:hover {
+	color: #C44545;
+}
