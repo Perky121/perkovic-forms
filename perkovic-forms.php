@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.6.9
+ * Version: 1.7.0
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.6.9' );
+define( 'PF_VERSION', '1.7.0' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -1639,10 +1639,27 @@ function pf_render_form_edit_page() {
 
 		<!-- Preview modal -->
 		<style>
+			#pf-preview-modal, #pf-template-modal {
+				position: fixed !important;
+				top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+				width: 100% !important; height: 100% !important;
+				background: rgba(43,36,32,0.5) !important;
+				z-index: 999999 !important;
+				align-items: center !important;
+				justify-content: center !important;
+				margin: 0 !important;
+				padding: 20px !important;
+				box-sizing: border-box !important;
+			}
 			#pf-preview-modal:not(.is-open),
 			#pf-template-modal:not(.is-open) { display: none !important; }
 			#pf-preview-modal.is-open,
 			#pf-template-modal.is-open { display: flex !important; }
+			#pf-preview-modal .pf-preview-modal-inner,
+			#pf-template-modal .pf-preview-modal-inner {
+				max-height: 90vh !important;
+				overflow: auto !important;
+			}
 		</style>
 		<div class="pf-preview-modal" id="pf-preview-modal" style="display:none;">
 			<div class="pf-preview-modal-inner">
