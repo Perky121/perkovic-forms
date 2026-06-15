@@ -655,6 +655,7 @@
 	background: #fff;
 	cursor: pointer;
 	transition: border-color 0.12s, box-shadow 0.12s;
+	position: relative;
 }
 
 .pf-builder-field:last-child { margin-bottom: 0; }
@@ -2856,4 +2857,59 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 	background: #B5654A;
 	border-color: #B5654A;
 	color: #fff;
+}
+
+/* Premjesti polje na stranicu — gumb i menu */
+.pf-bf-move {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: transparent;
+	padding: 2px;
+	line-height: 1;
+	border-radius: 4px;
+	transition: color 0.12s, background 0.12s;
+}
+
+.pf-builder-field:hover .pf-bf-move {
+	color: #9C9182;
+}
+
+.pf-bf-move:hover {
+	color: #B5654A;
+	background: #F4EEE4;
+}
+
+.pf-bf-move-menu {
+	position: absolute;
+	right: 12px;
+	margin-top: 4px;
+	background: #fff;
+	border: 1px solid #DDD4C8;
+	border-radius: 8px;
+	box-shadow: 0 6px 24px rgba(43,36,32,0.15);
+	z-index: 50;
+	overflow: hidden;
+	min-width: 160px;
+}
+
+.pf-bf-move-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	padding: 9px 14px;
+	background: none;
+	border: none;
+	border-bottom: 1px solid #F0EAE2;
+	font-size: 13px;
+	color: #2B2420;
+	cursor: pointer;
+	transition: background 0.1s;
+}
+
+.pf-bf-move-item:last-child { border-bottom: none; }
+
+.pf-bf-move-item:hover {
+	background: #F7F3EF;
+	color: #B5654A;
 }

@@ -323,6 +323,44 @@ jQuery(function ($) {
 		});
 		$toolbar.append($clone);
 
+		// Premjesti na stranicu (samo ako ima više stranica)
+		if (pfSteps.length > 1) {
+			var $move = $('<button type="button" class="pf-bf-move" title="Premjesti na drugu stranicu"><span class="dashicons dashicons-arrow-right-alt2"></span></button>');
+			$move.on('click', function (e) {
+				e.stopPropagation();
+				// Pronađi trenutnu stranicu polja
+				var curIdx = -1;
+				pfSteps.forEach(function (step, si) {
+					step.rows.forEach(function (row) {
+						row.cells.forEach(function (cell) {
+							if (cell.indexOf(field) > -1) curIdx = si;
+						});
+					});
+				});
+
+				// Mini menu sa stranicama
+				$('.pf-bf-move-menu').remove();
+				var $menu = $('<div class="pf-bf-move-menu"></div>');
+				pfSteps.forEach(function (step, si) {
+					if (si === curIdx) return;
+					var $item = $('<button type="button" class="pf-bf-move-item">' + escapeHtml(getStepLabel(step, si)) + '</button>');
+					$item.on('click', function (ev) {
+						ev.stopPropagation();
+						$menu.remove();
+						moveFieldToStep(field, si);
+					});
+					$menu.append($item);
+				});
+				$(this).after($menu);
+
+				// Zatvori menu na klik vani
+				setTimeout(function () {
+					$(document).one('click', function () { $menu.remove(); });
+				}, 0);
+			});
+			$toolbar.append($move);
+		}
+
 		var $del = $('<button type="button" class="pf-bf-delete" title="Obriši polje"><span class="dashicons dashicons-trash"></span></button>');
 		$del.on('click', function (e) {
 			e.stopPropagation();
@@ -429,6 +467,46 @@ jQuery(function ($) {
 			activeStep = pfSteps.length - 1;
 		}
 		renderCanvas();
+	}
+
+	function moveFieldToStep(field, targetStepIdx) {
+		if (targetStepIdx < 0 || targetStepIdx >= pfSteps.length) return;
+
+		// Ukloni polje s trenutne pozicije
+		var removed = false;
+		outer:
+		for (var s = 0; s < pfSteps.length; s++) {
+			var rows = pfSteps[s].rows;
+			for (var r = 0; r < rows.length; r++) {
+				var cells = rows[r].cells;
+				for (var c = 0; c < cells.length; c++) {
+					var idx = cells[c].indexOf(field);
+					if (idx > -1) {
+						if (s === targetStepIdx) return; // već je tu
+						cells[c].splice(idx, 1);
+						removed = true;
+						break outer;
+					}
+				}
+			}
+		}
+		if (!removed) return;
+
+		// Dodaj na ciljnu stranicu — u prvi red, prvi stupac
+		var targetStep = pfSteps[targetStepIdx];
+		if (!targetStep.rows.length) {
+			targetStep.rows.push({ cols: 1, cells: [[]] });
+		}
+		targetStep.rows[0].cells[0].push(field);
+
+		// Prebaci na ciljnu stranicu da korisnik vidi rezultat
+		activeStep = targetStepIdx;
+		selectedUid = field._uid;
+		renderCanvas();
+		setTimeout(function () {
+			var f = fieldsByUid[field._uid];
+			if (f) openPanel(f);
+		}, 0);
 	}
 
 	function deleteField(field) {
@@ -1108,6 +1186,29 @@ jQuery(function ($) {
 				updateCardPreview(field);
 			});
 			$panelTarget.append(panelRow('Default vrijednost', $defVal));
+		}
+
+		// Premjesti na stranicu (samo ako ima više stranica)
+		if (pfSteps.length > 1 && field.type !== 'hidden') {
+			var $moveSelect = $('<select></select>');
+			var currentStepIdx = -1;
+			pfSteps.forEach(function (step, si) {
+				// Pronađi na kojoj je stranici ovo polje
+				step.rows.forEach(function (row) {
+					row.cells.forEach(function (cell) {
+						if (cell.indexOf(field) > -1) currentStepIdx = si;
+					});
+				});
+			});
+			pfSteps.forEach(function (step, si) {
+				var sel = si === currentStepIdx ? ' selected' : '';
+				$moveSelect.append('<option value="' + si + '"' + sel + '>' + escapeHtml(getStepLabel(step, si)) + '</option>');
+			});
+			$moveSelect.on('change', function () {
+				var targetIdx = parseInt($(this).val(), 10);
+				moveFieldToStep(field, targetIdx);
+			});
+			$panelTarget.append(panelRow('Premjesti na stranicu', $moveSelect));
 		}
 
 		// Logika (Smart Logic) - uvjet prikaza
