@@ -603,5 +603,19 @@
 
 	ready(function () {
 		document.querySelectorAll('.pf-form').forEach(initForm);
+
+		// is-checked klasa na label karticama (checkbox/radio)
+		document.querySelectorAll('.pf-form').forEach(function (form) {
+			function syncChecked() {
+				form.querySelectorAll('.pf-inline-option').forEach(function (label) {
+					var inp = label.querySelector('input[type="checkbox"], input[type="radio"]');
+					if (inp) {
+						label.classList.toggle('is-checked', inp.checked);
+					}
+				});
+			}
+			form.addEventListener('change', syncChecked);
+			syncChecked(); // inicijalno stanje
+		});
 	});
 })();
