@@ -245,29 +245,89 @@
 .pf-form .pf-inline-option {
 	display: flex;
 	align-items: center;
-	gap: 9px;
+	gap: 10px;
 	font-family: 'Montserrat', sans-serif;
 	font-weight: 500;
-	font-size: 13px;
-	margin-bottom: 8px;
+	font-size: 14px;
+	margin-bottom: 10px;
 	color: var(--pf-text, #1A1614);
 	cursor: pointer;
-	padding: 0;
-	background: none;
-	border: none;
+	padding: 10px 14px;
+	background: #fff;
+	border: 1.5px solid var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 6px);
+	transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+	position: relative;
+	user-select: none;
+	-webkit-user-select: none;
 }
 
 .pf-form .pf-inline-option:last-child { margin-bottom: 0; }
 
+.pf-form .pf-inline-option:hover {
+	border-color: var(--pf-primary, #B5654A);
+	background: #FBF6F4;
+}
+
+/* Sakrij native input, zamijeni custom boxom */
 .pf-form .pf-inline-option input[type="checkbox"],
 .pf-form .pf-inline-option input[type="radio"] {
-	width: 17px;
-	height: 17px;
-	margin: 0;
-	padding: 0;
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+	pointer-events: none;
+}
+
+/* Custom checkbox/radio box */
+.pf-form .pf-inline-option::before {
+	content: '';
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	flex-shrink: 0;
-	accent-color: var(--pf-primary, #B5654A);
-	cursor: pointer;
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--pf-border, #DDD4C8);
+	border-radius: 4px;
+	background: #fff;
+	transition: border-color 0.15s ease, background 0.15s ease;
+	box-sizing: border-box;
+}
+
+/* Radio — zaobljeni */
+.pf-form .pf-field-radio .pf-inline-option::before {
+	border-radius: 50%;
+}
+
+/* Checked state — boja obruba */
+.pf-form .pf-inline-option:has(input:checked) {
+	border-color: var(--pf-primary, #B5654A);
+	background: #FBF6F4;
+	box-shadow: 0 0 0 3px rgba(181,101,74,0.08);
+}
+
+.pf-form .pf-inline-option:has(input:checked)::before {
+	background: var(--pf-primary, #B5654A);
+	border-color: var(--pf-primary, #B5654A);
+	/* SVG kvačica bijela */
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='10' viewBox='0 0 12 10'%3E%3Cpath d='M1 5l3.5 3.5L11 1' stroke='%23ffffff' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 12px 10px;
+}
+
+/* Radio checked — kružić unutar */
+.pf-form .pf-field-radio .pf-inline-option:has(input:checked)::before {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Ccircle cx='4' cy='4' r='3' fill='%23ffffff'/%3E%3C/svg%3E");
+	background-size: 8px 8px;
+}
+
+/* Razmak između polja koja se pojavljuju uvjetno */
+.pf-form .pf-field[data-cond-field] {
+	margin-top: 24px;
+	padding-top: 20px;
+	border-top: 1px solid var(--pf-border, #EDE8E0);
 }
 
 /* ---- File upload ---- */
@@ -704,32 +764,7 @@
 	margin: 0;
 }
 
-.pf-form .pf-inline-option {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	font-weight: 400;
-	font-size: 15px;
-	margin-bottom: 10px;
-	color: var(--pf-text, #2B2420);
-	cursor: pointer;
-	padding: 0;
-	background: none;
-	border: none;
-}
-
-.pf-form .pf-inline-option:last-child { margin-bottom: 0; }
-
-.pf-form .pf-inline-option input[type="checkbox"],
-.pf-form .pf-inline-option input[type="radio"] {
-	width: 18px;
-	height: 18px;
-	margin: 0;
-	padding: 0;
-	flex-shrink: 0;
-	accent-color: var(--pf-primary, #B5654A);
-	cursor: pointer;
-}
+/* (stilovi za pf-inline-option definirani gore) */
 
 /* ---- File upload ---- */
 .pf-form .pf-field input[type="file"] {
