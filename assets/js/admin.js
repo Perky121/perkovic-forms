@@ -279,7 +279,12 @@ jQuery(function ($) {
 				h += '</fieldset>';
 				break;
 			case 'file':
-				h += '<input type="file" disabled>';
+				h += '<div class="pf-file-zone">'
+					+ '<div class="pf-file-droparea">'
+					+ '<div class="pf-file-icon"><svg width="36" height="36" viewBox="0 0 36 36" fill="none"><path d="M18 4v18M10 12l8-8 8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 26v2a2 2 0 002 2h20a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>'
+					+ '<p class="pf-file-main-text">Povuci datoteke ovdje ili <span class="pf-file-browse">odaberi s računala</span></p>'
+					+ '<p class="pf-file-sub-text">PDF, JPG, DWG, DXF, IFC, ZIP &middot; max 10 datoteka &middot; 20 MB po datoteci</p>'
+					+ '</div></div>';
 				break;
 			default:
 				var it = ['email', 'tel', 'number'].indexOf(field.type) > -1 ? field.type : 'text';

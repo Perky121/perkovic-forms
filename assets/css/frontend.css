@@ -117,13 +117,19 @@
 
 /* ---- Fields ---- */
 .pf-form .pf-field {
-	margin-bottom: 16px;
+	margin-bottom: 22px;
 	padding: 0;
 	border: none;
 	background: none;
 }
 
 .pf-form .pf-field:last-child { margin-bottom: 0; }
+
+/* Veći razmak prije checkbox/radio grupa (fieldset) za vizualno odvajanje pitanja */
+.pf-form .pf-field-checkbox,
+.pf-form .pf-field-radio {
+	margin-bottom: 26px;
+}
 
 /* UPPERCASE labelice — moderno i profesionalno */
 .pf-form .pf-field label,
@@ -141,6 +147,16 @@
 	border: none;
 	line-height: 1.4;
 	width: 100%;
+}
+
+/* Legend (pitanje za checkbox/radio grupu) — više prostora do opcija */
+.pf-form .pf-field legend {
+	margin-bottom: 12px;
+	font-size: 14px;
+	font-weight: 600;
+	text-transform: none;
+	letter-spacing: 0;
+	color: var(--pf-text, #2B2420);
 }
 
 .pf-form .pf-required-mark {
@@ -288,11 +304,9 @@
 	cursor: pointer;
 }
 
-/* Razmak između polja koja se pojavljuju uvjetno */
+/* Razmak između polja koja se pojavljuju uvjetno — bez linije, samo prostor */
 .pf-form .pf-field[data-cond-field] {
-	margin-top: 20px;
-	padding-top: 20px;
-	border-top: 1px solid var(--pf-border, #E5DFD8);
+	margin-top: 6px;
 }
 
 /* ---- File upload ---- */
