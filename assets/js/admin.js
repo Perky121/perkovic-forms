@@ -1,0 +1,1650 @@
+jQuery(function ($) {
+	'use strict';
+
+	// Bail ako builder nije na stranici (npr. Upiti/Postavke)
+	if (!document.getElementById('pf-steps-container')) {
+		return;
+	}
+
+	var pfSteps       = [];
+	var fieldsByUid   = {};
+	var selectedUid   = null;
+	var uidCounter    = 1;
+	var activeStep    = 0;
+
+	var pfFieldTypes = window.pfFieldTypes || {};
+	var CHOICE_TYPES = ['select', 'radio', 'checkbox'];
+
+	/* ---------------------------------------------------------
+	 *  Pomoćne funkcije
+	 * --------------------------------------------------------- */
+	function escapeHtml(str) {
+		return $('<div>').text(str || '').html();
+	}
+
+	function escapeAttr(str) {
+		return (str || '').replace(/"/g, '&quot;');
+	}
+
+	function slugify(str) {
+		var s = (str || '')
+			.toLowerCase()
+			.replace(/[čć]/g, 'c')
+			.replace(/š/g, 's')
+			.replace(/ž/g, 'z')
+			.replace(/đ/g, 'dj')
+			.replace(/[^a-z0-9]+/g, '_')
+			.replace(/^_+|_+$/g, '');
+		return s || 'polje';
+	}
+
+	function getNextUid() {
+		return 'f' + (uidCounter++);
+	}
+
+	function ensureUid(field) {
+		if (!field._uid) {
+			field._uid = getNextUid();
+		}
+		return field._uid;
+	}
+
+	function allFieldsFlat() {
+		var out = [];
+		pfSteps.forEach(function (step) {
+			step.rows.forEach(function (row) {
+				row.cells.forEach(function (cell) {
+					cell.forEach(function (f) {
+						out.push(f);
+					});
+				});
+			});
+		});
+		return out;
+	}
+
+	function generateUniqueName(label, excludeField) {
+		var base = slugify(label);
+		var name = base;
+		var n = 2;
+		var all = allFieldsFlat();
+		while (all.some(function (f) { return f !== excludeField && f.name === name; })) {
+			name = base + '_' + n;
+			n++;
+		}
+		return name;
+	}
+
+	function defaultFieldForType(type) {
+		var label = pfFieldTypes[type] || type;
+		var field = {
+			type: type,
+			label: label,
+			name: '',
+			required: false,
+			placeholder: '',
+			options: CHOICE_TYPES.indexOf(type) > -1 ? ['Opcija 1', 'Opcija 2'] : [],
+			condition: null,
+			_nameAuto: true
+		};
+		if (type === 'html') {
+			field.placeholder = '<p>Tekst...</p>';
+		}
+		field.name = generateUniqueName(label, field);
+		return field;
+	}
+
+	/* ---------------------------------------------------------
+	 *  Render preview polja (koristi frontend.css klase)
+	 * --------------------------------------------------------- */
+	function renderFieldPreviewHTML(field) {
+		var label = field.label || '(bez naziva)';
+		var req   = field.required ? ' <span class="pf-required-mark">*</span>' : '';
+
+		// Generiraj condition atribute za SVaki tip polja
+		var condAttrs = '';
+		if (field.condition && field.condition.field) {
+			condAttrs = ' data-cond-field="' + escapeAttr(field.condition.field) + '"'
+			          + ' data-cond-op="'    + escapeAttr(field.condition.operator || 'equals') + '"'
+			          + ' data-cond-value="' + escapeAttr(field.condition.value || '') + '"';
+		}
+
+		// Inicijalno sakrij polja s uvjetom (evaluatePreviewConditions će ih otkriti kad treba)
+		var initialStyle = condAttrs ? ' style="display:none;"' : '';
+
+		if (field.type === 'html') {
+			return '<div class="pf-field pf-field-html"' + condAttrs + initialStyle + '>'
+				+ (field.placeholder || '<em>Info blok</em>') + '</div>';
+		}
+
+		if (field.type === 'hidden') {
+			var utmInfo = field.utm_source ? ('UTM: ' + field.utm_source) : ('vrijednost: ' + (field.default_value || '(prazno)'));
+			return '<div class="pf-field pf-field-hidden"' + condAttrs + initialStyle + '>'
+				+ '<span class="dashicons dashicons-hidden" style="color:#9C9182;"></span> '
+				+ '<strong>' + escapeHtml(label) + '</strong>'
+				+ ' <em style="color:#9C9182;">— skriveno polje (' + escapeHtml(utmInfo) + ')</em></div>';
+		}
+
+		if (field.type === 'section_divider') {
+			var html = '<div class="pf-field pf-field-section-divider"' + condAttrs + initialStyle + '>';
+			if (label) html += '<div class="pf-divider-title">' + escapeHtml(label) + '</div>';
+			html += '<div class="pf-divider-line"></div>';
+			if (field.placeholder) html += '<div class="pf-divider-desc">' + escapeHtml(field.placeholder) + '</div>';
+			html += '</div>';
+			return html;
+		}
+
+		if (field.type === 'image_choice') {
+			var html = '<div class="pf-field pf-field-image-choice"' + condAttrs + initialStyle + '>'
+				+ '<fieldset><legend>' + escapeHtml(label) + (field.required ? ' <span class="pf-required-mark">*</span>' : '') + '</legend>'
+				+ '<div class="pf-image-choice-grid">';
+			(field.options || []).forEach(function (opt) {
+				var parts    = opt.split('|');
+				var optLabel = (parts[0] || '').trim();
+				var optImg   = (parts[1] || '').trim();
+				html += '<label class="pf-image-choice-item"><input type="checkbox" disabled>';
+				html += '<span class="pf-image-choice-card">';
+				if (optImg) {
+					html += '<span class="pf-image-choice-img" style="background-image:url(\'' + escapeAttr(optImg) + '\')"></span>';
+				} else {
+					html += '<span class="pf-image-choice-icon"><span class="dashicons dashicons-format-image"></span></span>';
+				}
+				html += '<span class="pf-image-choice-label">' + escapeHtml(optLabel) + '</span></span></label>';
+			});
+			html += '</div></fieldset></div>';
+			return html;
+		}
+
+		// Sva ostala polja
+		var html = '<div class="pf-field pf-field-' + field.type + '"' + condAttrs + initialStyle + '>';
+
+		if (field.type !== 'checkbox' && field.type !== 'radio') {
+			html += '<label>' + escapeHtml(label) + req + '</label>';
+		}
+
+		switch (field.type) {
+			case 'textarea':
+				html += '<textarea name="' + escapeAttr(field.name) + '" placeholder="' + escapeAttr(field.placeholder) + '"></textarea>';
+				break;
+
+			case 'select':
+				html += '<select name="' + escapeAttr(field.name) + '">'
+					+ '<option value="">Odaberite...</option>';
+				(field.options || []).forEach(function (o) {
+					html += '<option value="' + escapeAttr(o) + '">' + escapeHtml(o) + '</option>';
+				});
+				html += '</select>';
+				break;
+
+			case 'radio':
+				html += '<fieldset><legend>' + escapeHtml(label) + req + '</legend>';
+				(field.options || []).forEach(function (o) {
+					html += '<label class="pf-inline-option">'
+						+ '<input type="radio" name="' + escapeAttr(field.name) + '" value="' + escapeAttr(o) + '"> '
+						+ escapeHtml(o) + '</label>';
+				});
+				html += '</fieldset>';
+				break;
+
+			case 'checkbox':
+				html += '<fieldset><legend>' + escapeHtml(label) + req + '</legend>';
+				(field.options || []).forEach(function (o) {
+					html += '<label class="pf-inline-option">'
+						+ '<input type="checkbox" name="' + escapeAttr(field.name) + '[]" value="' + escapeAttr(o) + '"> '
+						+ escapeHtml(o) + '</label>';
+				});
+				html += '</fieldset>';
+				break;
+
+			case 'file':
+				html += '<input type="file" disabled>';
+				if (field.placeholder) {
+					html += '<p class="pf-field-hint">Dozvoljeno: ' + escapeHtml(field.placeholder) + ' (maks. 10 MB)</p>';
+				}
+				break;
+
+			default:
+				var inputType = ['email', 'tel', 'number'].indexOf(field.type) > -1 ? field.type : 'text';
+				html += '<input type="' + inputType + '" name="' + escapeAttr(field.name) + '" placeholder="' + escapeAttr(field.placeholder) + '">';
+		}
+
+		html += '</div>';
+		return html;
+	}
+
+	/* ---------------------------------------------------------
+	 *  Canvas rendering
+	 * --------------------------------------------------------- */
+	function indexFields() {
+		fieldsByUid = {};
+		allFieldsFlat().forEach(function (f) {
+			ensureUid(f);
+			fieldsByUid[f._uid] = f;
+		});
+	}
+
+	function buildFieldCard(field) {
+		var $card = $('<div class="pf-builder-field" data-uid="' + field._uid + '"></div>');
+		var $toolbar = $('<div class="pf-bf-toolbar"></div>');
+
+		$toolbar.append('<span class="pf-bf-handle dashicons dashicons-move" title="Povuci za premještanje"></span>');
+		$toolbar.append('<span class="pf-bf-type-icon dashicons ' + escapeAttr(window.pfFieldIcons && window.pfFieldIcons[field.type] || 'dashicons-editor-textcolor') + '"></span>');
+		$toolbar.append('<span class="pf-bf-type-label">' + escapeHtml(pfFieldTypes[field.type] || field.type) + '</span>');
+
+		if (field.required) {
+			$toolbar.append('<span class="pf-bf-required-badge">obavezno</span>');
+		}
+
+		var $clone = $('<button type="button" class="pf-bf-clone" title="Dupliciraj polje"><span class="dashicons dashicons-admin-page"></span></button>');
+		$clone.on('click', function (e) {
+			e.stopPropagation();
+			cloneField(field);
+		});
+		$toolbar.append($clone);
+
+		var $del = $('<button type="button" class="pf-bf-delete" title="Obriši polje"><span class="dashicons dashicons-trash"></span></button>');
+		$del.on('click', function (e) {
+			e.stopPropagation();
+			if (!confirm('Obrisati ovo polje?')) {
+				return;
+			}
+			deleteField(field);
+		});
+		$toolbar.append($del);
+
+		$card.append($toolbar);
+		$card.append('<div class="pf-bf-preview">' + renderFieldPreviewHTML(field) + '</div>');
+
+		$card.on('click', function () {
+			$('.pf-builder-field').removeClass('is-selected');
+			$card.addClass('is-selected');
+			openPanel(field);
+		});
+
+		return $card;
+	}
+
+	function setRowCols(row, n) {
+		if (n === row.cols) {
+			return;
+		}
+		if (n < row.cols) {
+			var merged = row.cells.slice(n - 1).reduce(function (acc, c) { return acc.concat(c); }, []);
+			row.cells = row.cells.slice(0, n - 1).concat([merged]);
+		} else {
+			while (row.cells.length < n) {
+				row.cells.push([]);
+			}
+		}
+		row.cols = n;
+	}
+
+	function cloneField(field) {
+		var copy = JSON.parse(JSON.stringify(field));
+		delete copy._uid;
+		copy._nameAuto = false;
+		copy.name = generateUniqueName(copy.name || copy.label, copy);
+		ensureUid(copy);
+
+		// Ubaci kopiju odmah iza originala
+		outer:
+		for (var s = 0; s < pfSteps.length; s++) {
+			for (var r = 0; r < pfSteps[s].rows.length; r++) {
+				for (var c = 0; c < pfSteps[s].rows[r].cells.length; c++) {
+					var idx = pfSteps[s].rows[r].cells[c].indexOf(field);
+					if (idx > -1) {
+						pfSteps[s].rows[r].cells[c].splice(idx + 1, 0, copy);
+						break outer;
+					}
+				}
+			}
+		}
+		renderCanvas();
+	}
+
+	function cloneRow(step, row) {
+		var copy = JSON.parse(JSON.stringify(row));
+		// Reset UIDs na svim kopiranim poljima i generiraj nova imena
+		copy.cells.forEach(function (cell) {
+			cell.forEach(function (f) {
+				delete f._uid;
+				f._nameAuto = false;
+				f.name = generateUniqueName(f.name || f.label, f);
+				ensureUid(f);
+			});
+		});
+		var idx = step.rows.indexOf(row);
+		step.rows.splice(idx + 1, 0, copy);
+		renderCanvas();
+	}
+
+	function deleteRow(step, row) {
+		var hasFields = row.cells.some(function (c) { return c.length > 0; });
+		if (hasFields) {
+			alert('Premjesti ili obriši polja iz ovog reda prije brisanja.');
+			return;
+		}
+		if (step.rows.length <= 1) {
+			alert('Korak mora imati bar jedan red.');
+			return;
+		}
+		step.rows.splice(step.rows.indexOf(row), 1);
+		renderCanvas();
+	}
+
+	function deleteStep(step) {
+		if (pfSteps.length <= 1) {
+			alert('Forma mora imati bar jedan korak.');
+			return;
+		}
+		var hasFields = step.rows.some(function (r) { return r.cells.some(function (c) { return c.length > 0; }); });
+		if (hasFields) {
+			alert('Premjesti ili obriši polja iz ovog koraka prije brisanja.');
+			return;
+		}
+		var idx = pfSteps.indexOf(step);
+		pfSteps.splice(idx, 1);
+		if (activeStep >= pfSteps.length) {
+			activeStep = pfSteps.length - 1;
+		}
+		renderCanvas();
+	}
+
+	function deleteField(field) {
+		outer:
+		for (var s = 0; s < pfSteps.length; s++) {
+			var rows = pfSteps[s].rows;
+			for (var r = 0; r < rows.length; r++) {
+				var cells = rows[r].cells;
+				for (var c = 0; c < cells.length; c++) {
+					var idx = cells[c].indexOf(field);
+					if (idx > -1) {
+						cells[c].splice(idx, 1);
+						break outer;
+					}
+				}
+			}
+		}
+		if (selectedUid === field._uid) {
+			selectedUid = null;
+			showPanelPlaceholder();
+		}
+		renderCanvas();
+	}
+
+	function buildRow(step, row) {
+		var $wrapper = $('<div class="pf-row-wrapper"></div>');
+		var $toolbar = $('<div class="pf-row-toolbar"></div>');
+
+		$toolbar.append('<span class="pf-row-toolbar-label">Stupci:</span>');
+
+		[1, 2, 3].forEach(function (n) {
+			var $b = $('<button type="button" class="pf-col-btn' + (row.cols === n ? ' is-active' : '') + '" title="' + n + ' stupac"></button>');
+			var $icon = $('<span class="pf-col-icon"></span>');
+			for (var i = 0; i < n; i++) {
+				$icon.append('<span></span>');
+			}
+			$b.append($icon);
+			$b.on('click', function () {
+				setRowCols(row, n);
+				renderCanvas();
+			});
+			$toolbar.append($b);
+		});
+
+		var $cloneRow = $('<button type="button" class="pf-row-clone" title="Dupliciraj red"><span class="dashicons dashicons-admin-page"></span></button>');
+		$cloneRow.on('click', function () {
+			cloneRow(step, row);
+		});
+		$toolbar.append($cloneRow);
+
+		var $del = $('<button type="button" class="pf-row-delete" title="Obriši red"><span class="dashicons dashicons-trash"></span></button>');
+		$del.on('click', function () {
+			deleteRow(step, row);
+		});
+		$toolbar.append($del);
+
+		$wrapper.append($toolbar);
+
+		var $grid = $('<div class="pf-row-grid" data-cols="' + row.cols + '"></div>');
+		row.cells.forEach(function (cell) {
+			var $col = $('<div class="pf-col"></div>');
+			cell.forEach(function (f) {
+				$col.append(buildFieldCard(f));
+			});
+			$grid.append($col);
+		});
+		$wrapper.append($grid);
+
+		return $wrapper;
+	}
+
+	function buildStepContent(step) {
+		var $wrap = $('<div class="pf-step-content"></div>');
+
+		var $rows = $('<div class="pf-step-rows"></div>');
+		step.rows.forEach(function (row) {
+			$rows.append(buildRow(step, row));
+		});
+		$wrap.append($rows);
+
+		var $addRow = $('<button type="button" class="button pf-add-row">+ Dodaj red</button>');
+		$addRow.on('click', function () {
+			step.rows.push({ cols: 1, cells: [[]] });
+			renderCanvas();
+		});
+		$wrap.append($addRow);
+
+		return $wrap;
+	}
+
+	function renderTabs() {
+		var $tabs = $('#pf-steps-tabs').empty();
+
+		pfSteps.forEach(function (step, i) {
+			var $tab = $('<div class="pf-step-tab' + (i === activeStep ? ' is-active' : '') + '">Stranica ' + (i + 1) + '</div>');
+
+			$tab.on('click', function () {
+				activeStep = i;
+				renderCanvas();
+			});
+
+			if (pfSteps.length > 1) {
+				var $x = $('<span class="pf-step-tab-close dashicons dashicons-no-alt" title="Obriši stranicu"></span>');
+				$x.on('click', function (e) {
+					e.stopPropagation();
+					deleteStep(step);
+				});
+				$tab.append($x);
+			}
+
+			$tabs.append($tab);
+		});
+
+		var $add = $('<button type="button" class="pf-step-tab-add" title="Dodaj stranicu"><span class="dashicons dashicons-plus-alt2"></span></button>');
+		$add.on('click', function () {
+			pfSteps.push({ rows: [{ cols: 1, cells: [[]] }] });
+			activeStep = pfSteps.length - 1;
+			renderCanvas();
+		});
+		$tabs.append($add);
+	}
+
+	function renderCanvas() {
+		indexFields();
+
+		if (activeStep >= pfSteps.length) {
+			activeStep = pfSteps.length - 1;
+		}
+		if (activeStep < 0) {
+			activeStep = 0;
+		}
+
+		renderTabs();
+
+		var $container = $('#pf-steps-container').empty();
+		$container.append(buildStepContent(pfSteps[activeStep]));
+
+		initSortables();
+
+		if (selectedUid && fieldsByUid[selectedUid]) {
+			$('#pf-steps-container .pf-builder-field[data-uid="' + selectedUid + '"]').addClass('is-selected');
+		}
+	}
+
+	function updateCardPreview(field) {
+		var $card = $('#pf-steps-container .pf-builder-field[data-uid="' + field._uid + '"]');
+
+		$card.find('.pf-bf-type-label').text(pfFieldTypes[field.type] || field.type);
+		$card.find('.pf-bf-required-badge').remove();
+
+		if (field.required) {
+			$card.find('.pf-bf-delete').before('<span class="pf-bf-required-badge">obavezno</span>');
+		}
+
+		$card.find('.pf-bf-preview').html(renderFieldPreviewHTML(field));
+	}
+
+	/* ---------------------------------------------------------
+	 *  Drag & drop
+	 * --------------------------------------------------------- */
+	function initSortables() {
+		$('#pf-steps-container .pf-col').each(function () {
+			new Sortable(this, {
+				group: 'pf-fields',
+				handle: '.pf-bf-handle',
+				animation: 150,
+				onAdd: function () {
+					setTimeout(rebuildFromDOM, 0);
+				},
+				onUpdate: function () {
+					setTimeout(rebuildFromDOM, 0);
+				},
+				onRemove: function () {
+					setTimeout(rebuildFromDOM, 0);
+				},
+				onEnd: function () {
+					setTimeout(rebuildFromDOM, 0);
+				}
+			});
+		});
+	}
+
+	function initPalette() {
+		$('#pf-palette-list .pf-palette-group-items').each(function () {
+			new Sortable(this, {
+				group: { name: 'pf-fields', pull: 'clone', put: false },
+				sort: false,
+				animation: 150
+			});
+		});
+	}
+
+	function rebuildFromDOM() {
+		var rows = [];
+
+		$('#pf-steps-container .pf-row-wrapper').each(function () {
+			var $grid = $(this).find('.pf-row-grid');
+			var cols  = parseInt($grid.attr('data-cols'), 10) || 1;
+			var cells = [];
+
+			$grid.find('.pf-col').each(function () {
+				var cell = [];
+
+				$(this).children().each(function () {
+					var $el = $(this);
+
+					if ($el.hasClass('pf-palette-item')) {
+						var type = $el.data('new-type');
+						var f = defaultFieldForType(type);
+						ensureUid(f);
+						cell.push(f);
+					} else {
+						var uid = $el.data('uid');
+						if (fieldsByUid[uid]) {
+							cell.push(fieldsByUid[uid]);
+						}
+					}
+				});
+
+				cells.push(cell);
+			});
+
+			rows.push({ cols: cols, cells: cells });
+		});
+
+		pfSteps[activeStep].rows = rows;
+		renderCanvas();
+
+		if (!selectedUid || !fieldsByUid[selectedUid]) {
+			showPanelPlaceholder();
+		}
+	}
+
+	/* ---------------------------------------------------------
+	 *  Panel (postavke polja)
+	 * --------------------------------------------------------- */
+	function panelRow(labelText, $control) {
+		var $row = $('<div class="pf-panel-row"></div>');
+		$row.append('<label>' + escapeHtml(labelText) + '</label>');
+		$row.append($control);
+		return $row;
+	}
+
+	function showPanelPlaceholder() {
+		selectedUid = null;
+		$('#pf-field-panel').html('<p class="pf-panel-placeholder">Klikni na polje za uređivanje postavki.</p>');
+	}
+
+	function buildConditionSection(field) {
+		var $wrap = $('<div class="pf-condition-block"></div>');
+		$wrap.append('<h4>Uvjet prikaza</h4>');
+
+		var hasCond = !!field.condition;
+		var $enableLabel = $('<label><input type="checkbox"' + (hasCond ? ' checked' : '') + '> Prikaži ovo polje samo ako je ispunjen uvjet</label>');
+		$wrap.append($enableLabel);
+
+		var $condFields = $('<div class="pf-condition-fields"></div>');
+		$condFields.toggle(hasCond);
+		$wrap.append($condFields);
+
+		function renderConditionInputs() {
+			$condFields.empty();
+
+			var others = allFieldsFlat().filter(function (f) { return f !== field && f.name; });
+			if (others.length === 0) {
+				$condFields.append('<p class="description">Nema drugih polja za postavljanje uvjeta.</p>');
+				return;
+			}
+
+			if (!field.condition || !others.some(function (f) { return f.name === field.condition.field; })) {
+				field.condition = { field: others[0].name, operator: 'equals', value: '' };
+			}
+
+			var $fieldSelect = $('<select></select>');
+			others.forEach(function (f) {
+				var sel = field.condition.field === f.name ? ' selected' : '';
+				$fieldSelect.append('<option value="' + escapeAttr(f.name) + '"' + sel + '>' + escapeHtml(f.label || f.name) + '</option>');
+			});
+
+			var ops = { equals: 'jednako je', not_equals: 'nije jednako', contains: 'sadrži' };
+			var $opSelect = $('<select></select>');
+			Object.keys(ops).forEach(function (k) {
+				var sel = field.condition.operator === k ? ' selected' : '';
+				$opSelect.append('<option value="' + k + '"' + sel + '>' + ops[k] + '</option>');
+			});
+
+			var $valInput = $('<input type="text" placeholder="vrijednost">').val(field.condition.value);
+
+			function sync() {
+				field.condition = {
+					field: $fieldSelect.val(),
+					operator: $opSelect.val(),
+					value: $valInput.val()
+				};
+			}
+
+			$fieldSelect.on('change', sync);
+			$opSelect.on('change', sync);
+			$valInput.on('input', sync);
+
+			var $row1 = $('<div class="pf-cond-row"></div>');
+			$row1.append('<label>Polje</label>').append($fieldSelect);
+
+			var $row2 = $('<div class="pf-cond-row"></div>');
+			$row2.append('<label>Uvjet</label>').append($opSelect);
+
+			var $row3 = $('<div class="pf-cond-row"></div>');
+			$row3.append('<label>Vrijednost</label>').append($valInput);
+
+			$condFields.append($row1).append($row2).append($row3);
+		}
+
+		if (hasCond) {
+			renderConditionInputs();
+		}
+
+		$enableLabel.find('input').on('change', function () {
+			if ($(this).is(':checked')) {
+				var others = allFieldsFlat().filter(function (f) { return f !== field && f.name; });
+				if (others.length === 0) {
+					alert('Nema drugih polja za postavljanje uvjeta - dodaj još neko polje prije ovog.');
+					$(this).prop('checked', false);
+					return;
+				}
+				field.condition = null;
+				renderConditionInputs();
+				$condFields.show();
+			} else {
+				field.condition = null;
+				$condFields.hide();
+			}
+		});
+
+		return $wrap;
+	}
+
+	function openPanel(field) {
+		selectedUid = field._uid;
+		var $panel = $('#pf-field-panel').empty();
+
+		var $header = $('<div class="pf-panel-header"></div>');
+		$header.append('<h3>Postavke polja</h3>');
+		var $close = $('<button type="button" class="pf-panel-close" title="Zatvori">&times;</button>');
+		$close.on('click', function () {
+			$('.pf-builder-field').removeClass('is-selected');
+			showPanelPlaceholder();
+		});
+		$header.append($close);
+		$panel.append($header);
+
+		// Tabovi
+		var $tabBar = $('<div class="pf-panel-tabs"></div>');
+		var $tabGeneral = $('<button type="button" class="pf-panel-tab is-active">Općenito</button>');
+		var $tabLogic = $('<button type="button" class="pf-panel-tab">Logika</button>');
+		$tabBar.append($tabGeneral).append($tabLogic);
+		$panel.append($tabBar);
+
+		var $general = $('<div class="pf-panel-tab-content"></div>');
+		var $logic = $('<div class="pf-panel-tab-content" style="display:none;"></div>');
+		$panel.append($general).append($logic);
+
+		$tabGeneral.on('click', function () {
+			$tabGeneral.addClass('is-active');
+			$tabLogic.removeClass('is-active');
+			$general.show();
+			$logic.hide();
+		});
+		$tabLogic.on('click', function () {
+			$tabLogic.addClass('is-active');
+			$tabGeneral.removeClass('is-active');
+			$logic.show();
+			$general.hide();
+		});
+
+		var $panelTarget = $general;
+
+		// Tip polja
+		var $typeSelect = $('<select></select>');
+		Object.keys(pfFieldTypes).forEach(function (key) {
+			var sel = field.type === key ? ' selected' : '';
+			$typeSelect.append('<option value="' + key + '"' + sel + '>' + escapeHtml(pfFieldTypes[key]) + '</option>');
+		});
+		$typeSelect.on('change', function () {
+			field.type = $(this).val();
+			if (CHOICE_TYPES.indexOf(field.type) > -1 && (!field.options || field.options.length === 0)) {
+				field.options = ['Opcija 1', 'Opcija 2'];
+			}
+			updateCardPreview(field);
+			openPanel(field);
+		});
+		$panelTarget.append(panelRow('Tip polja', $typeSelect));
+
+		// Hidden/UTM specifična polja
+		if (field.type === 'hidden') {
+			// Label (interni naziv) + Name za hidden polje
+			var $hLabel = $('<input type="text">').val(field.label);
+			$panelTarget.append(panelRow('Naziv (interni, npr. "Izvor")', $hLabel));
+
+			var $hName = $('<input type="text">').val(field.name);
+			$panelTarget.append(panelRow('Naziv polja (name)', $hName));
+
+			$hLabel.on('input', function () {
+				field.label = $(this).val();
+				if (field._nameAuto !== false) {
+					field.name = generateUniqueName(field.label, field);
+					$hName.val(field.name);
+				}
+			});
+			$hName.on('input', function () {
+				field._nameAuto = false;
+				field.name = $(this).val();
+			});
+
+			var $utm = $('<select></select>');
+			var utmOpts = { '': '— ne koristi UTM —', utm_source: 'utm_source', utm_medium: 'utm_medium', utm_campaign: 'utm_campaign', utm_term: 'utm_term', utm_content: 'utm_content' };
+			Object.keys(utmOpts).forEach(function (k) {
+				var sel = (field.utm_source || '') === k ? ' selected' : '';
+				$utm.append('<option value="' + k + '"' + sel + '>' + utmOpts[k] + '</option>');
+			});
+			$utm.on('change', function () { field.utm_source = $(this).val(); });
+
+			var $def = $('<input type="text" placeholder="Npr. organic (ako nije UTM)">').val(field.default_value || '');
+			$def.on('input', function () { field.default_value = $(this).val(); });
+
+			$panelTarget.append(panelRow('UTM parametar', $utm));
+			$panelTarget.append(panelRow('Default vrijednost', $def));
+
+			// Logic tab nije potreban za hidden
+			$logic.append('<p class="description">Skrivena polja uvijek se šalju.</p>');
+			return;
+		}
+
+		// Section divider - samo naslov i opis
+		if (field.type === 'section_divider') {
+			var $sdTitle = $('<input type="text" placeholder="npr. Kontakt podaci">').val(field.label);
+			$sdTitle.on('input', function () {
+				field.label = $(this).val();
+				updateCardPreview(field);
+			});
+			var $sdDesc = $('<input type="text" placeholder="Neobavezan opis ispod linije">').val(field.placeholder || '');
+			$sdDesc.on('input', function () {
+				field.placeholder = $(this).val();
+				updateCardPreview(field);
+			});
+			$panelTarget.append(panelRow('Naslov sekcije', $sdTitle));
+			$panelTarget.append(panelRow('Opis (opcionalno)', $sdDesc));
+			$logic.append('<p class="description">Razdjelnici ne sudjeluju u uvjetnoj logici.</p>');
+			return;
+		}
+
+		// Label
+		var $labelInput = $('<input type="text">').val(field.label);
+		$panelTarget.append(panelRow(field.type === 'html' ? 'Naziv (interno)' : 'Label', $labelInput));
+
+		// Name
+		var $nameInput = $('<input type="text">').val(field.name);
+		if (field.type !== 'html') {
+			$panelTarget.append(panelRow('Naziv polja (name)', $nameInput));
+		}
+
+		$labelInput.on('input', function () {
+			field.label = $(this).val();
+			if (field._nameAuto !== false) {
+				field.name = generateUniqueName(field.label, field);
+				$nameInput.val(field.name);
+			}
+			updateCardPreview(field);
+		});
+
+		$nameInput.on('input', function () {
+			field._nameAuto = false;
+			field.name = $(this).val();
+		});
+
+		// Required
+		if (field.type !== 'html') {
+			var $req = $('<input type="checkbox">').prop('checked', !!field.required);
+			$req.on('change', function () {
+				field.required = $(this).is(':checked');
+				updateCardPreview(field);
+			});
+			$panelTarget.append(panelRow('Obavezno polje', $req));
+		}
+
+		// Placeholder / HTML / file extensions
+		if (field.type === 'html') {
+			var $html = $('<textarea rows="5"></textarea>').val(field.placeholder);
+			$html.on('input', function () {
+				field.placeholder = $(this).val();
+				updateCardPreview(field);
+			});
+			$panelTarget.append(panelRow('HTML sadržaj', $html));
+		} else if (CHOICE_TYPES.indexOf(field.type) === -1) {
+			var phLabel = field.type === 'file' ? 'Dozvoljene ekstenzije (npr. .jpg,.png,.pdf)' : 'Placeholder';
+			var $ph = $('<input type="text">').val(field.placeholder);
+			$ph.on('input', function () {
+				field.placeholder = $(this).val();
+				updateCardPreview(field);
+			});
+			$panelTarget.append(panelRow(phLabel, $ph));
+		}
+
+		// Opcije
+		if (CHOICE_TYPES.indexOf(field.type) > -1 || field.type === 'image_choice') {
+			var isImgChoice = field.type === 'image_choice';
+			var $opts = $('<textarea rows="5" placeholder="' + (isImgChoice ? 'Label slike|https://url-slike.jpg\nDruga opcija|https://...' : 'Jedna opcija po redu') + '"></textarea>').val((field.options || []).join('\n'));
+			$opts.on('input', function () {
+				field.options = $(this).val().split('\n').map(function (s) { return s.trim(); }).filter(function (s) { return s.length > 0; });
+				updateCardPreview(field);
+			});
+			var label_opts = isImgChoice ? 'Opcije (Label|URL slike)' : 'Opcije (jedna po redu)';
+			$panelTarget.append(panelRow(label_opts, $opts));
+			if (isImgChoice) {
+				var $hint = $('<p class="description" style="font-size:11px;margin-top:4px;">Format: <code>Naziv opcije|https://url-slike.jpg</code><br>URL slike je opcionalan — bez njega prikazuje se ikona.</p>');
+				$panelTarget.append($hint);
+
+				// Multiple / single toggle
+				var $multi = $('<input type="checkbox">').prop('checked', !!field.multiple);
+				$multi.on('change', function () {
+					field.multiple = $(this).is(':checked');
+					updateCardPreview(field);
+				});
+				$panelTarget.append(panelRow('Višestruki odabir', $multi));
+			}
+		}
+
+		// Default vrijednost (za text/email/tel/number/textarea/select)
+		if (['text', 'email', 'tel', 'number', 'textarea', 'select'].indexOf(field.type) > -1) {
+			var $defVal = $('<input type="text">').val(field.default_value || '');
+			$defVal.on('input', function () {
+				field.default_value = $(this).val();
+				updateCardPreview(field);
+			});
+			$panelTarget.append(panelRow('Default vrijednost', $defVal));
+		}
+
+		// Logika (Smart Logic) - uvjet prikaza
+		if (field.type !== 'html') {
+			$logic.append(buildConditionSection(field));
+		} else {
+			$logic.append('<p class="description">Info blok nema logiku prikaza.</p>');
+		}
+	}
+
+	/* ---------------------------------------------------------
+	 *  Init
+	 * --------------------------------------------------------- */
+	pfSteps = (window.pfInitialStructure && window.pfInitialStructure.steps) || [];
+
+	if (!pfSteps.length) {
+		pfSteps = [{ rows: [{ cols: 1, cells: [[]] }] }];
+	}
+
+	allFieldsFlat().forEach(function (f) {
+		f.condition = f.condition || null;
+		f.options = f.options || [];
+		f._nameAuto = false;
+	});
+
+	renderCanvas();
+	initPalette();
+
+	/* ---------------------------------------------------------
+	 *  Validacija prije spremanja
+	 * --------------------------------------------------------- */
+	function validateBeforeSave() {
+		var errors = [];
+		var names  = {};
+		var NO_NAME_TYPES = ['section_divider', 'html'];
+
+		allFieldsFlat().forEach(function (f) {
+			if (NO_NAME_TYPES.indexOf(f.type) !== -1) return; // ne trebaju name
+			if (!f.name) {
+				errors.push('Polje "' + (f.label || '(bez naziva)') + '" nema postavljen naziv (name).');
+			} else if (names[f.name]) {
+				errors.push('Duplikat naziva polja: "' + f.name + '" se pojavljuje više puta.');
+			} else {
+				names[f.name] = true;
+			}
+		});
+
+		var hasAnyField = allFieldsFlat().length > 0;
+		if (!hasAnyField) {
+			errors.push('Forma nema niti jedno polje. Dodaj barem jedno polje prije spremanja.');
+		}
+
+		if (errors.length) {
+			alert('Greške prije spremanja:\n\n' + errors.join('\n'));
+			return false;
+		}
+		return true;
+	}
+
+	$('#pf-form-edit-form').on('submit', function (e) {
+		// Sync postavki prije slanja
+		syncSettings();
+
+		if (!validateBeforeSave()) {
+			e.preventDefault();
+			return;
+		}
+		var clean = JSON.parse(JSON.stringify(pfSteps, function (key, val) {
+			if (key === '_uid' || key === '_nameAuto') return undefined;
+			return val;
+		}));
+		$('#pf-fields-json').val(JSON.stringify({ steps: clean }));
+	});
+
+	/* ---------------------------------------------------------
+	 *  Panel: hidden/UTM polje - dodatna polja u openPanel
+	 * --------------------------------------------------------- */
+	// UTM i default value za hidden tip - dodaju se dinamički u openPanel
+	// (logika je u openPanel funkciji)
+
+	/* ---------------------------------------------------------
+	 *  Predlošci polja (Templates)
+	 * --------------------------------------------------------- */
+	var pfTemplates = {};
+
+	function loadTemplates(cb) {
+		$.post(window.pfAjaxUrl, {
+			action: 'pf_get_templates',
+			nonce: window.pfTemplateNonce
+		}, function (res) {
+			if (res.success) {
+				pfTemplates = res.data || {};
+				if (cb) cb();
+			}
+		});
+	}
+
+	function renderTemplateModal() {
+		var $modal = $('#pf-template-modal');
+		var $list  = $modal.find('.pf-template-list').empty();
+
+		var keys = Object.keys(pfTemplates);
+		if (!keys.length) {
+			$list.append('<p class="pf-panel-placeholder">Nema spremljenih predložaka.</p>');
+		} else {
+			keys.forEach(function (id) {
+				var tpl = pfTemplates[id];
+				var $row = $('<div class="pf-template-row"></div>');
+				$row.append('<span class="pf-template-name">' + escapeHtml(tpl.name) + ' <small>(' + tpl.fields.length + ' polja)</small></span>');
+
+				var $use = $('<button type="button" class="button button-small">Ubaci</button>');
+				$use.on('click', function () {
+					// Ubaci sva polja predloška u aktivni korak, u novi red
+					var newCells = [ tpl.fields.map(function (f) {
+						var copy = JSON.parse(JSON.stringify(f));
+						delete copy._uid;
+						copy._nameAuto = false;
+						copy.name = generateUniqueName(copy.name || copy.label, copy);
+						ensureUid(copy);
+						return copy;
+					}) ];
+					pfSteps[activeStep].rows.push({ cols: 1, cells: newCells });
+					renderCanvas();
+					$('#pf-template-modal').removeClass('is-open');
+				});
+
+				var $del = $('<button type="button" class="button button-small pf-tpl-del" style="margin-left:6px;color:#b32d2e;">Obriši</button>');
+				$del.on('click', function () {
+					if (!confirm('Obrisati predložak "' + tpl.name + '"?')) return;
+					$.post(window.pfAjaxUrl, { action: 'pf_delete_template', nonce: window.pfTemplateNonce, template_id: id }, function () {
+						delete pfTemplates[id];
+						renderTemplateModal();
+					});
+				});
+
+				$row.append($use).append($del);
+				$list.append($row);
+			});
+		}
+	}
+
+	// Spremi trenutna polja aktivne stranice kao predložak
+	$('#pf-save-template-btn').on('click', function () {
+		var flat = [];
+		pfSteps[activeStep].rows.forEach(function (row) {
+			row.cells.forEach(function (cell) {
+				cell.forEach(function (f) { flat.push(f); });
+			});
+		});
+
+		if (!flat.length) {
+			alert('Nema polja na trenutnoj stranici za spremanje kao predložak.');
+			return;
+		}
+
+		var name = prompt('Naziv predloška:', 'Predložak ' + (Object.keys(pfTemplates).length + 1));
+		if (!name) return;
+
+		var cleanFields = JSON.parse(JSON.stringify(flat, function (k, v) {
+			if (k === '_uid' || k === '_nameAuto') return undefined;
+			return v;
+		}));
+
+		$.post(window.pfAjaxUrl, {
+			action: 'pf_save_template',
+			nonce: window.pfTemplateNonce,
+			name: name,
+			fields: JSON.stringify(cleanFields)
+		}, function (res) {
+			if (res.success) {
+				pfTemplates[res.data.id] = res.data;
+				alert('Predložak "' + name + '" uspješno spremljen!');
+			}
+		});
+	});
+
+	$('#pf-load-template-btn').on('click', function () {
+		loadTemplates(function () {
+			renderTemplateModal();
+			$('#pf-template-modal').addClass('is-open');
+		});
+	});
+
+	$('#pf-template-modal-close, #pf-template-modal').on('click', function (e) {
+		if (e.target === this || $(e.target).is('#pf-template-modal-close')) {
+			$('#pf-template-modal').removeClass('is-open');
+		}
+	});
+
+	/* ---------------------------------------------------------
+	 *  Pregled forme (Desktop/Mobitel)
+	 * --------------------------------------------------------- */
+	function buildPreviewHTML() {
+		var totalSteps = pfSteps.length;
+		var submitLabel = $('#pf-submit-label').val() || 'Pošalji';
+
+		var html = '<form class="pf-form pf-preview-form" novalidate onsubmit="return false;">';
+
+		// Step indicator (samo ako ima više stranica)
+		if (totalSteps > 1) {
+			html += '<div class="pf-steps-indicator">';
+			pfSteps.forEach(function (step, i) {
+				html += '<div class="pf-step-dot ' + (i === 0 ? 'is-active' : '') + '" data-step="' + (i + 1) + '">' + (i + 1) + '</div>';
+				if (i < totalSteps - 1) html += '<div class="pf-step-line' + (i < 0 ? ' is-complete' : '') + '"></div>';
+			});
+			html += '</div>';
+		}
+
+		pfSteps.forEach(function (step, i) {
+			var isActive = i === 0;
+			html += '<div class="pf-step-panel ' + (isActive ? 'is-active' : '') + '" data-step="' + (i + 1) + '">';
+
+			step.rows.forEach(function (row) {
+				html += '<div class="pf-row pf-cols-' + row.cols + '">';
+				row.cells.forEach(function (cell) {
+					html += '<div class="pf-col">';
+					cell.forEach(function (f) {
+						if (f.type !== 'hidden') {
+							html += renderFieldPreviewHTML(f);
+						}
+					});
+					html += '</div>';
+				});
+				html += '</div>';
+			});
+
+			// Navigacija
+			html += '<div class="pf-step-actions">';
+			if (i > 0) {
+				html += '<button type="button" class="pf-btn pf-btn-secondary pf-preview-prev" data-step="' + (i + 1) + '">← Natrag</button>';
+			}
+			if (i < totalSteps - 1) {
+				html += '<button type="button" class="pf-btn pf-btn-primary pf-preview-next" data-step="' + (i + 1) + '">Sljedeći korak →</button>';
+			} else {
+				html += '<button type="button" class="pf-btn pf-btn-primary" disabled>' + escapeHtml(submitLabel) + '</button>';
+			}
+			html += '</div>';
+
+			html += '</div>'; // pf-step-panel
+		});
+
+		html += '</form>';
+		return html;
+	}
+
+	// Preview navigacija (delegirana)
+	$(document).on('click', '.pf-preview-next', function () {
+		var step = parseInt($(this).data('step'), 10);
+		var $frame = $('#pf-preview-frame');
+		$frame.find('.pf-step-panel.is-active').removeClass('is-active');
+		$frame.find('.pf-step-panel[data-step="' + (step + 1) + '"]').addClass('is-active');
+		$frame.find('.pf-step-dot').removeClass('is-active is-complete').each(function () {
+			var s = parseInt($(this).data('step'), 10);
+			if (s < step + 1) $(this).addClass('is-complete');
+			else if (s === step + 1) $(this).addClass('is-active');
+		});
+	});
+
+	$(document).on('click', '.pf-preview-prev', function () {
+		var step = parseInt($(this).data('step'), 10);
+		var $frame = $('#pf-preview-frame');
+		$frame.find('.pf-step-panel.is-active').removeClass('is-active');
+		$frame.find('.pf-step-panel[data-step="' + (step - 1) + '"]').addClass('is-active');
+		$frame.find('.pf-step-dot').removeClass('is-active is-complete').each(function () {
+			var s = parseInt($(this).data('step'), 10);
+			if (s < step - 1) $(this).addClass('is-complete');
+			else if (s === step - 1) $(this).addClass('is-active');
+		});
+	});
+
+	$('#pf-preview-btn').on('click', function () {
+		$('#pf-preview-frame').html(buildPreviewHTML());
+		$('#pf-preview-modal').addClass('is-open');
+		// Evaluiraj uvjete odmah pri otvaranju
+		evaluatePreviewConditions($('#pf-preview-frame')[0]);
+	});
+
+	// Re-evaluiraj pri svakoj promjeni unutar previewa
+	$(document).on('change input', '#pf-preview-frame', function () {
+		evaluatePreviewConditions($('#pf-preview-frame')[0]);
+	});
+
+	function getPreviewFieldValue(frame, name) {
+		// Traži po name i name[] (checkbox)
+		var byName = Array.prototype.slice.call(
+			frame.querySelectorAll('[name="' + name + '"], [name="' + name + '[]"]')
+		);
+		if (!byName.length) return '';
+
+		var type = byName[0].type;
+		if (type === 'checkbox') {
+			return byName.filter(function (el) { return el.checked; }).map(function (el) { return el.value; });
+		}
+		if (type === 'radio') {
+			var checked = byName.filter(function (el) { return el.checked; });
+			return checked.length ? checked[0].value : '';
+		}
+		if (type === 'select-one' || type === 'select-multiple') {
+			return byName[0].value;
+		}
+		return byName[0].value;
+	}
+
+	function evaluatePreviewConditions(frame) {
+		if (!frame) return;
+		frame.querySelectorAll('[data-cond-field]').forEach(function (el) {
+			var condField = el.getAttribute('data-cond-field');
+			var condOp    = el.getAttribute('data-cond-op')    || 'equals';
+			var condValue = el.getAttribute('data-cond-value') || '';
+			var target    = getPreviewFieldValue(frame, condField);
+			var show      = false;
+
+			if (Array.isArray(target)) {
+				switch (condOp) {
+					case 'not_equals': show = target.indexOf(condValue) === -1; break;
+					case 'contains':   show = target.some(function (t) { return t.toLowerCase().indexOf(condValue.toLowerCase()) !== -1; }); break;
+					default:           show = target.indexOf(condValue) !== -1; break; // equals
+				}
+			} else {
+				var targetStr = (target || '').toLowerCase();
+				var valueStr  = (condValue || '').toLowerCase();
+				switch (condOp) {
+					case 'not_equals': show = targetStr !== valueStr; break;
+					case 'contains':   show = targetStr.indexOf(valueStr) !== -1; break;
+					default:           show = targetStr === valueStr; break; // equals
+				}
+			}
+
+			el.style.display = show ? '' : 'none';
+		});
+	}
+
+	$('#pf-preview-close').on('click', function () {
+		$('#pf-preview-modal').removeClass('is-open');
+	});
+
+	$('#pf-preview-modal').on('click', function (e) {
+		if (e.target === this) {
+			$(this).removeClass('is-open');
+		}
+	});
+
+	$('.pf-preview-device-btn').on('click', function () {
+		$('.pf-preview-device-btn').removeClass('is-active');
+		$(this).addClass('is-active');
+		$('#pf-preview-frame').toggleClass('is-mobile', $(this).data('device') === 'mobile');
+	});
+
+	/* ---------------------------------------------------------
+	 *  Edit page tab switching (Polja / Izgled / Postavke / AI)
+	 * --------------------------------------------------------- */
+	$('.pf-edit-tab').on('click', function () {
+		if ($(this).hasClass('pf-tab-disabled')) return;
+		var tab = $(this).data('tab');
+		$('.pf-edit-tab').removeClass('is-active');
+		$(this).addClass('is-active');
+		$('.pf-edit-tab-content').hide();
+		$('.pf-edit-tab-content[data-tab="' + tab + '"]').show();
+		if (tab === 'theme') renderThemePreview();
+	});
+
+	/* ---------------------------------------------------------
+	 *  Inline title editing
+	 * --------------------------------------------------------- */
+	var $titleDisplay = $('#pf-title-display');
+	var $titleInput   = $('#pf-title-input');
+	var $titleHint    = $('.pf-title-hint');
+	var $titleHidden  = $('#pf-hidden-title');
+
+	$titleDisplay.on('click', function () {
+		$titleDisplay.hide();
+		$titleHint.show();
+		$titleInput.show().val($titleHidden.val()).focus().select();
+	});
+
+	function commitTitle() {
+		var val = $titleInput.val().trim();
+		$titleInput.hide();
+		$titleHint.hide();
+		$titleDisplay.show();
+		if (val) {
+			$titleHidden.val(val);
+			$titleDisplay.html(escapeHtml(val));
+		}
+	}
+
+	$titleInput.on('keydown', function (e) {
+		if (e.key === 'Enter')  { e.preventDefault(); commitTitle(); }
+		if (e.key === 'Escape') { $titleInput.val($titleHidden.val()); commitTitle(); }
+	}).on('blur', commitTitle);
+
+	/* ---------------------------------------------------------
+	 *  Settings tab — sync live fields → hidden inputs
+	 * --------------------------------------------------------- */
+	function syncSettings() {
+		$('#pf-hidden-success').val($('#pf-success').val());
+		$('#pf-hidden-submit-label').val($('#pf-submit-label').val());
+		$('#pf-hidden-ar-enabled').val($('#pf-ar-enabled-check').is(':checked') ? '1' : '');
+		$('#pf-hidden-ar-subject').val($('#pf-ar-subject').val());
+		$('#pf-hidden-ar-message').val($('#pf-ar-message').val());
+	}
+
+	$(document).on('change input', '#pf-success, #pf-submit-label, #pf-ar-enabled-check, #pf-ar-subject, #pf-ar-message', syncSettings);
+
+	// Sync once on load
+	syncSettings();
+
+	/* ---------------------------------------------------------
+	 *  Copy shortcode
+	 * --------------------------------------------------------- */
+	$(document).on('click', '.pf-copy-btn', function () {
+		var text = $(this).data('copy');
+		if (navigator.clipboard) {
+			navigator.clipboard.writeText(text).then(() => {
+				var $btn = $(this);
+				$btn.html('<span class="dashicons dashicons-yes"></span> Kopirano!');
+				setTimeout(function () {
+					$btn.html('<span class="dashicons dashicons-clipboard"></span> Kopiraj');
+				}, 2000);
+			});
+		}
+	});
+
+	// Header meta shortcode click
+	$(document).on('click', '.pf-meta-shortcode', function () {
+		var text = $(this).text().trim();
+		if (navigator.clipboard) {
+			navigator.clipboard.writeText(text);
+			$(this).addClass('pf-copied');
+			setTimeout(() => $(this).removeClass('pf-copied'), 1500);
+		}
+	});
+
+	/* ---------------------------------------------------------
+	 *  Theme editor
+	 * --------------------------------------------------------- */
+	var pfCfg    = window.pfAdminCfg || {};
+	var pfPresets = pfCfg.presets || {};
+	var pfTheme  = {};
+
+	// Inicijalizacija teme iz hidden input-a
+	try {
+		var raw = $('#pf-theme-json').val();
+		pfTheme = raw ? JSON.parse(raw) : {};
+	} catch(e) { pfTheme = {}; }
+
+	function syncThemeToInput() {
+		$('#pf-theme-json').val(JSON.stringify(pfTheme));
+	}
+
+	function renderThemePreview() {
+		var t = pfTheme;
+		var btnBg     = t.button_style === 'filled' ? t.primary_color : 'transparent';
+		var btnBorder = t.button_style === 'ghost'  ? 'transparent'   : t.primary_color;
+		var btnText   = t.button_style === 'filled' ? (t.button_text || '#fff') : t.primary_color;
+		var radius    = (t.border_radius || '8') + 'px';
+
+		var html = '<div style="font-family:' + escapeAttr(t.font_family || 'inherit') + ';background:' + escapeAttr(t.bg_color || '#fff') + ';color:' + escapeAttr(t.text_color || '#222') + ';padding:20px;border-radius:' + radius + ';">';
+		html += '<div style="margin-bottom:14px;">';
+		html += '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:' + escapeAttr(t.label_color || t.text_color || '#222') + ';">Ime i prezime *</label>';
+		html += '<input disabled placeholder="Ivica Ivić" style="width:100%;padding:10px;border:1px solid ' + escapeAttr(t.border_color || '#ccc') + ';border-radius:' + radius + ';background:' + escapeAttr(t.input_bg || '#fff') + ';color:' + escapeAttr(t.text_color || '#222') + ';font-size:14px;">';
+		html += '</div>';
+		html += '<div style="margin-bottom:14px;">';
+		html += '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:' + escapeAttr(t.label_color || t.text_color || '#222') + ';">Tip projekta *</label>';
+		html += '<select disabled style="width:100%;padding:10px;border:1px solid ' + escapeAttr(t.border_color || '#ccc') + ';border-radius:' + radius + ';background:' + escapeAttr(t.input_bg || '#fff') + ';color:' + escapeAttr(t.text_color || '#222') + ';font-size:14px;"><option>Kuhinja</option></select>';
+		html += '</div>';
+		html += '<button disabled style="background:' + escapeAttr(btnBg) + ';color:' + escapeAttr(btnText) + ';border:2px solid ' + escapeAttr(btnBorder) + ';border-radius:' + radius + ';padding:12px 28px;font-size:15px;font-weight:600;cursor:pointer;width:100%;">';
+		html += 'Pošalji upit</button>';
+		html += '</div>';
+
+		$('#pf-theme-preview').html(html);
+	}
+
+	// Color inputs (picker + text)
+	$(document).on('input change', '.pf-color-input', function () {
+		var prop = $(this).data('prop');
+		var val  = $(this).val();
+		pfTheme[prop] = val;
+		$('.pf-color-text[data-prop="' + prop + '"]').val(val);
+		syncThemeToInput();
+		renderThemePreview();
+	});
+
+	$(document).on('change', '.pf-color-text', function () {
+		var prop = $(this).data('prop');
+		var val  = $(this).val();
+		if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+			pfTheme[prop] = val;
+			$('.pf-color-input[data-prop="' + prop + '"]').val(val);
+			syncThemeToInput();
+			renderThemePreview();
+		}
+	});
+
+	// Range input (border-radius)
+	$(document).on('input', '.pf-range-input', function () {
+		var prop = $(this).data('prop');
+		var val  = $(this).val();
+		pfTheme[prop] = val;
+		$('#pf-radius-label').text(val + 'px');
+		syncThemeToInput();
+		renderThemePreview();
+	});
+
+	// Select (font)
+	$(document).on('change', '.pf-select-input', function () {
+		var prop = $(this).data('prop');
+		pfTheme[prop] = $(this).val();
+		syncThemeToInput();
+		renderThemePreview();
+	});
+
+	// Button style toggle
+	$(document).on('click', '.pf-btn-style-opt', function () {
+		$('.pf-btn-style-opt').removeClass('is-active');
+		$(this).addClass('is-active');
+		pfTheme.button_style = $(this).data('val');
+		syncThemeToInput();
+		renderThemePreview();
+	});
+
+	// Preset cards
+	$(document).on('click', '.pf-preset-card', function () {
+		var key = $(this).data('preset');
+		var preset = pfPresets[key];
+		if (!preset) return;
+
+		pfTheme = $.extend({}, preset);
+		delete pfTheme.label;
+		syncThemeToInput();
+
+		// Ažuriraj sve kontrole
+		Object.keys(pfTheme).forEach(function (prop) {
+			var val = pfTheme[prop];
+			$('.pf-color-input[data-prop="' + prop + '"]').val(val);
+			$('.pf-color-text[data-prop="' + prop + '"]').val(val);
+			$('.pf-range-input[data-prop="' + prop + '"]').val(val);
+			$('.pf-select-input[data-prop="' + prop + '"]').val(val);
+		});
+		$('#pf-radius-label').text((pfTheme.border_radius || '8') + 'px');
+		$('.pf-btn-style-opt').removeClass('is-active');
+		$('.pf-btn-style-opt[data-val="' + (pfTheme.button_style || 'filled') + '"]').addClass('is-active');
+
+		$('.pf-preset-card').removeClass('is-active');
+		$(this).addClass('is-active');
+		renderThemePreview();
+	});
+
+	/* ---------------------------------------------------------
+	 *  AI Asistent chat
+	 * --------------------------------------------------------- */
+	var aiHistory = [];
+
+	function getFormContext() {
+		var clean = JSON.parse(JSON.stringify(pfSteps, function (k, v) {
+			if (k === '_uid' || k === '_nameAuto') return undefined;
+			return v;
+		}));
+
+		// Flat popis polja za lakšu referencu
+		var flatFields = [];
+		pfSteps.forEach(function (step, si) {
+			step.rows.forEach(function (row) {
+				row.cells.forEach(function (cell) {
+					cell.forEach(function (f) {
+						if (f.name || f.type === 'section_divider') {
+							flatFields.push({
+								step:  si + 1,
+								type:  f.type,
+								label: f.label,
+								name:  f.name || '',
+								required: !!f.required
+							});
+						}
+					});
+				});
+			});
+		});
+
+		return JSON.stringify({
+			form_title:  $('#pf-hidden-title').val() || $('#pf-title-input').val() || '(bez naziva)',
+			total_steps: pfSteps.length,
+			total_fields: flatFields.length,
+			flat_fields:  flatFields,
+			steps:        clean
+		});
+	}
+
+	function appendAiMessage(role, text) {
+		var $wrap = $('#pf-ai-messages');
+		var cls   = role === 'user' ? 'pf-ai-msg-user' : 'pf-ai-msg-agent';
+		var $msg  = $('<div class="pf-ai-msg ' + cls + '"><div class="pf-ai-bubble"></div></div>');
+		$msg.find('.pf-ai-bubble').text(text);
+		$wrap.append($msg);
+		$wrap.scrollTop($wrap[0].scrollHeight);
+	}
+
+	function appendAiTyping() {
+		var $wrap = $('#pf-ai-messages');
+		var $el   = $('<div class="pf-ai-msg pf-ai-msg-agent pf-ai-typing" id="pf-ai-typing"><div class="pf-ai-bubble"><span></span><span></span><span></span></div></div>');
+		$wrap.append($el);
+		$wrap.scrollTop($wrap[0].scrollHeight);
+	}
+
+	function applyAiActions(actions) {
+		if (!actions || !actions.length) return;
+
+		var changed = false;
+
+		actions.forEach(function (action) {
+			switch (action.type) {
+
+				case 'replace_all':
+					if (action.steps && Array.isArray(action.steps)) {
+						pfSteps = action.steps;
+						allFieldsFlat().forEach(function (f) { ensureUid(f); f._nameAuto = false; f.options = f.options || []; f.condition = f.condition || null; });
+						changed = true;
+					}
+					break;
+
+				case 'add_field':
+					var stepIdx = (action.step || 1) - 1;
+					if (!pfSteps[stepIdx]) {
+						pfSteps.push({ rows: [{ cols: 1, cells: [[]] }] });
+						stepIdx = pfSteps.length - 1;
+					}
+					var newField = defaultFieldForType(action.field.type || 'text');
+					$.extend(newField, action.field);
+					newField._nameAuto = false;
+					ensureUid(newField);
+					// Dodaj u zadnji red zadnjeg stupca te stranice
+					var lastRow = pfSteps[stepIdx].rows[pfSteps[stepIdx].rows.length - 1];
+					lastRow.cells[0].push(newField);
+					changed = true;
+					break;
+
+				case 'update_field':
+					allFieldsFlat().forEach(function (f) {
+						if (f.name === action.name && action.changes) {
+							$.extend(f, action.changes);
+							changed = true;
+						}
+					});
+					break;
+
+				case 'delete_field':
+					pfSteps.forEach(function (step) {
+						step.rows.forEach(function (row) {
+							row.cells.forEach(function (cell, ci) {
+								row.cells[ci] = cell.filter(function (f) { return f.name !== action.name; });
+							});
+						});
+					});
+					changed = true;
+					break;
+
+				case 'add_step':
+					pfSteps.push({ rows: [{ cols: 1, cells: [[]] }] });
+					changed = true;
+					break;
+
+				case 'reorder_fields':
+					var reorderStep = (action.step || 1) - 1;
+					var reorderOrder = action.order || [];
+					if (pfSteps[reorderStep] && reorderOrder.length) {
+						// Skupi sva polja s te stranice po name-u
+						var fieldMap = {};
+						pfSteps[reorderStep].rows.forEach(function (row) {
+							row.cells.forEach(function (cell) {
+								cell.forEach(function (f) {
+									if (f.name) fieldMap[f.name] = f;
+								});
+							});
+						});
+						// Rebuildiraj prvi red u novom redoslijedu
+						var reordered = reorderOrder.map(function (n) { return fieldMap[n]; }).filter(Boolean);
+						if (reordered.length) {
+							pfSteps[reorderStep].rows = [{ cols: 1, cells: [reordered] }];
+							changed = true;
+						}
+					}
+					break;
+			}
+		});
+
+		if (changed) {
+			activeStep = 0;
+			renderCanvas();
+
+			// Prikaz popisa promjena
+			var $sugg = $('#pf-ai-suggestions').empty();
+			actions.forEach(function (a) {
+				var desc = '';
+				switch (a.type) {
+					case 'add_field':    desc = '➕ Dodano polje: ' + (a.field && a.field.label || ''); break;
+					case 'update_field': desc = '✏️ Ažurirano: ' + (a.name || ''); break;
+					case 'delete_field': desc = '🗑️ Obrisano: ' + (a.name || ''); break;
+					case 'add_step':     desc = '📄 Dodana nova stranica'; break;
+					case 'replace_all':  desc = '🔄 Forma potpuno zamijenjena'; break;
+				}
+				if (desc) $sugg.append('<div class="pf-ai-change-item">' + escapeHtml(desc) + '</div>');
+			});
+		}
+	}
+
+	function sendAiMessage() {
+		var msg = $('#pf-ai-input').val().trim();
+		if (!msg) return;
+
+		$('#pf-ai-input').val('').css('height', 'auto');
+		$('#pf-ai-send').prop('disabled', true);
+
+		appendAiMessage('user', msg);
+		appendAiTyping();
+
+		$.post({
+			url: (pfCfg.ajaxUrl || ajaxurl) + '?action=pf_ai_chat',
+			data: {
+				nonce:        pfCfg.aiNonce || '',
+				message:      msg,
+				history:      JSON.stringify(aiHistory),
+				form_context: getFormContext(),
+			},
+			success: function (res) {
+				$('#pf-ai-typing').remove();
+				$('#pf-ai-send').prop('disabled', false);
+
+				if (res.success) {
+					var agentMsg = res.data.message;
+					appendAiMessage('agent', agentMsg);
+
+					aiHistory.push({ role: 'user',      content: msg });
+					aiHistory.push({ role: 'assistant', content: agentMsg });
+					if (aiHistory.length > 40) aiHistory = aiHistory.slice(-40);
+
+					applyAiActions(res.data.actions);
+				} else {
+					appendAiMessage('agent', '❌ ' + (res.data || 'Greška. Pokušaj ponovo.'));
+				}
+			},
+			error: function () {
+				$('#pf-ai-typing').remove();
+				$('#pf-ai-send').prop('disabled', false);
+				appendAiMessage('agent', '❌ Greška u komunikaciji. Provjeri internet vezu.');
+			}
+		});
+	}
+
+	$('#pf-ai-send').on('click', sendAiMessage);
+	$('#pf-ai-input').on('keydown', function (e) {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			sendAiMessage();
+		}
+	});
+	$('#pf-ai-clear').on('click', function () {
+		aiHistory = [];
+		$('#pf-ai-messages').html('<div class="pf-ai-msg pf-ai-msg-agent"><div class="pf-ai-bubble">Razgovor je obrisan. Što trebamo napraviti? 👋</div></div>');
+		$('#pf-ai-suggestions').html('<p class="pf-ai-empty-hint">Ovdje će se prikazati prijedlozi izmjena.</p>');
+	});
+	// Auto-resize textarea
+	$('#pf-ai-input').on('input', function () {
+		this.style.height = 'auto';
+		this.style.height = Math.min(this.scrollHeight, 140) + 'px';
+	});
+});

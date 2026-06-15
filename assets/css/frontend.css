@@ -1,0 +1,469 @@
+/* ===========================================================
+   Perković Forms - Frontend CSS
+   Scoped na .pf-form za izolaciju od teme/Elementora
+   =========================================================== */
+
+/* Card wrapper - daje bijelu karticu s padding i shadow */
+.pf-form-wrap {
+	background: #FFFFFF;
+	border-radius: 8px;
+	padding: 32px;
+	max-width: 720px;
+	margin: 0 auto;
+	box-shadow: 0 4px 24px rgba(43, 36, 32, 0.06);
+}
+
+@media (max-width: 640px) {
+	.pf-form-wrap { padding: 20px; }
+}
+
+/* Theme CSS varijable se definiraju inline u shortcode outputu za #pf-wrap-X */
+
+.pf-form,
+.pf-form * {
+	box-sizing: border-box;
+}
+
+.pf-form {
+	max-width: 720px;
+	margin: 0 auto;
+	font-family: var(--pf-font, inherit);
+	background: var(--pf-bg, transparent);
+	color: var(--pf-text, #2B2420);
+	padding: 0;
+}
+
+/* ---- Step indicator ---- */
+.pf-form .pf-steps-indicator {
+	display: flex;
+	align-items: center;
+	margin-bottom: 28px;
+	padding: 0;
+	background: none;
+	border: none;
+	list-style: none;
+}
+
+.pf-form .pf-step-dot {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: #EFEAE2;
+	color: #9C9182;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 700;
+	font-size: 14px;
+	flex-shrink: 0;
+	line-height: 1;
+	transition: background-color 0.2s ease, color 0.2s ease;
+	border: none;
+	padding: 0;
+}
+
+.pf-form .pf-step-dot.is-active,
+.pf-form .pf-step-dot.is-complete {
+	background: var(--pf-primary, #B5654A);
+	color: #fff;
+}
+
+.pf-form .pf-step-line {
+	flex: 1;
+	height: 2px;
+	background: #EFEAE2;
+	margin: 0 8px;
+	border: none;
+	transition: background-color 0.2s ease;
+}
+
+.pf-form .pf-step-line.is-complete {
+	background: var(--pf-primary, #B5654A);
+}
+
+/* ---- Step panels ---- */
+.pf-form .pf-step-panel {
+	display: none !important;
+}
+
+.pf-form .pf-step-panel.is-active {
+	display: block !important;
+	animation: pf-fade-in 0.22s ease;
+}
+
+@keyframes pf-fade-in {
+	from { opacity: 0; transform: translateY(5px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Grid ---- */
+.pf-form .pf-row {
+	display: grid;
+	gap: 0 20px;
+	grid-template-columns: 1fr;
+}
+
+.pf-form .pf-row.pf-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.pf-form .pf-row.pf-cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+@media (max-width: 640px) {
+	.pf-form .pf-row.pf-cols-2,
+	.pf-form .pf-row.pf-cols-3 { grid-template-columns: 1fr; }
+}
+
+.pf-form .pf-col { min-width: 0; }
+
+/* ---- Fields ---- */
+.pf-form .pf-field {
+	margin-bottom: 20px;
+	padding: 0;
+	border: none;
+	background: none;
+}
+
+.pf-form .pf-field:last-child { margin-bottom: 0; }
+
+.pf-form .pf-field label,
+.pf-form .pf-field legend {
+	display: block;
+	font-weight: 600;
+	font-size: 15px;
+	margin-bottom: 7px;
+	padding: 0;
+	color: var(--pf-label, var(--pf-text, #2B2420));
+	background: none;
+	border: none;
+	line-height: 1.4;
+	width: 100%;
+}
+
+.pf-form .pf-required-mark { color: var(--pf-primary, #B5654A); }
+
+/* ---- Text inputs ---- */
+.pf-form .pf-field input[type="text"],
+.pf-form .pf-field input[type="email"],
+.pf-form .pf-field input[type="tel"],
+.pf-form .pf-field input[type="number"],
+.pf-form .pf-field textarea {
+	display: block;
+	width: 100%;
+	padding: 13px 14px;
+	font-size: 15px;
+	font-family: var(--pf-font, inherit);
+	border: 1px solid var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 8px);
+	background: var(--pf-input-bg, #FBF8F4);
+	color: var(--pf-text, #2B2420);
+	line-height: 1.5;
+	outline: none;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	-webkit-appearance: none;
+	appearance: none;
+	margin: 0;
+}
+
+.pf-form .pf-field input[type="text"]:focus,
+.pf-form .pf-field input[type="email"]:focus,
+.pf-form .pf-field input[type="tel"]:focus,
+.pf-form .pf-field input[type="number"]:focus,
+.pf-form .pf-field textarea:focus {
+	border-color: var(--pf-primary, #B5654A);
+	box-shadow: 0 0 0 3px rgba(181, 101, 74, 0.12);
+}
+
+.pf-form .pf-field textarea {
+	min-height: 110px;
+	resize: vertical;
+}
+
+/* ---- Select ---- */
+.pf-form .pf-field select {
+	display: block;
+	width: 100%;
+	padding: 13px 38px 13px 14px;
+	font-size: 15px;
+	font-family: var(--pf-font, inherit);
+	border: 1px solid var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 8px);
+	background-color: var(--pf-input-bg, #FBF8F4);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239C9182' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 14px center;
+	background-size: 12px 8px;
+	color: var(--pf-text, #2B2420);
+	-webkit-appearance: none;
+	appearance: none;
+	cursor: pointer;
+	line-height: 1.5;
+	outline: none;
+	margin: 0;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pf-form .pf-field select:focus {
+	border-color: var(--pf-primary, #B5654A);
+	box-shadow: 0 0 0 3px rgba(181, 101, 74, 0.12);
+}
+
+/* ---- Invalid ---- */
+.pf-form .pf-field input.pf-invalid,
+.pf-form .pf-field select.pf-invalid,
+.pf-form .pf-field textarea.pf-invalid {
+	border-color: #C44545;
+	box-shadow: 0 0 0 3px rgba(196, 69, 69, 0.10);
+}
+
+/* ---- Checkbox / Radio ---- */
+.pf-form .pf-field fieldset {
+	border: none;
+	padding: 0;
+	margin: 0;
+}
+
+.pf-form .pf-inline-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 400;
+	font-size: 15px;
+	margin-bottom: 10px;
+	color: var(--pf-text, #2B2420);
+	cursor: pointer;
+	padding: 0;
+	background: none;
+	border: none;
+}
+
+.pf-form .pf-inline-option:last-child { margin-bottom: 0; }
+
+.pf-form .pf-inline-option input[type="checkbox"],
+.pf-form .pf-inline-option input[type="radio"] {
+	width: 18px;
+	height: 18px;
+	margin: 0;
+	padding: 0;
+	flex-shrink: 0;
+	accent-color: var(--pf-primary, #B5654A);
+	cursor: pointer;
+}
+
+/* ---- File upload ---- */
+.pf-form .pf-field input[type="file"] {
+	display: block;
+	width: 100%;
+	padding: 10px 12px;
+	font-size: 14px;
+	border: 1px dashed var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 8px);
+	background: var(--pf-input-bg, #FBF8F4);
+	color: var(--pf-text, #2B2420);
+	font-family: var(--pf-font, inherit);
+	cursor: pointer;
+}
+
+/* ---- Hidden fields ---- */
+.pf-form .pf-field.pf-hidden { display: none; }
+
+/* ---- HTML block ---- */
+.pf-form .pf-field-html {
+	font-size: 15px;
+	color: var(--pf-text, #6B6258);
+	line-height: 1.6;
+}
+
+.pf-form .pf-field-hint {
+	font-size: 12px;
+	color: #9C9182;
+	margin: 6px 0 0;
+}
+
+/* ---- Section divider ---- */
+.pf-form .pf-field-section-divider {
+	padding: 8px 0;
+	border: none;
+	background: none;
+}
+
+.pf-form .pf-divider-title {
+	font-size: 17px;
+	font-weight: 700;
+	color: var(--pf-text, #2B2420);
+	margin-bottom: 10px;
+}
+
+.pf-form .pf-divider-line {
+	border: none;
+	border-top: 1px solid var(--pf-border, #DDD4C8);
+	margin: 0;
+	height: 0;
+	background: none;
+}
+
+.pf-form .pf-divider-desc {
+	font-size: 14px;
+	color: #9C9182;
+	margin-top: 8px;
+	line-height: 1.5;
+}
+
+/* ---- Image choice ---- */
+.pf-form .pf-field-image-choice fieldset {
+	border: none;
+	padding: 0;
+	margin: 0;
+}
+
+.pf-form .pf-image-choice-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+	gap: 10px;
+}
+
+.pf-form .pf-image-choice-item {
+	cursor: pointer;
+	display: block;
+}
+
+.pf-form .pf-image-choice-item input {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.pf-form .pf-image-choice-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 8px;
+	border: 2px solid var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 8px);
+	background: var(--pf-input-bg, #FBF8F4);
+	text-align: center;
+	transition: border-color 0.15s, box-shadow 0.15s;
+	cursor: pointer;
+}
+
+.pf-form .pf-image-choice-card:hover {
+	border-color: var(--pf-primary, #B5654A);
+}
+
+.pf-form .pf-image-choice-item input:checked + .pf-image-choice-card {
+	border-color: var(--pf-primary, #B5654A);
+	box-shadow: 0 0 0 2px rgba(181, 101, 74, 0.15);
+}
+
+.pf-form .pf-image-choice-img {
+	display: block;
+	width: 100%;
+	height: 72px;
+	background-size: cover;
+	background-position: center;
+	border-radius: 4px;
+}
+
+.pf-form .pf-image-choice-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 60px;
+	color: #C9BBA8;
+}
+
+.pf-form .pf-image-choice-label {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--pf-text, #2B2420);
+	line-height: 1.3;
+}
+
+/* ---- Buttons ---- */
+.pf-form .pf-step-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-top: 28px;
+	padding: 0;
+	background: none;
+	border: none;
+}
+
+.pf-form .pf-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 2px solid transparent;
+	border-radius: var(--pf-radius, 8px);
+	padding: 13px 28px;
+	font-size: 15px;
+	font-weight: 600;
+	font-family: var(--pf-font, inherit);
+	cursor: pointer;
+	transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+	text-decoration: none;
+	line-height: 1;
+}
+
+.pf-form .pf-btn-primary {
+	background: var(--pf-btn-bg, var(--pf-primary, #B5654A));
+	color: var(--pf-btn-text, #ffffff);
+	border-color: var(--pf-btn-border, transparent);
+}
+
+.pf-form .pf-btn-primary:hover { opacity: 0.88; }
+
+.pf-form .pf-btn-primary[disabled],
+.pf-form .pf-btn-primary:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.pf-form .pf-btn-secondary {
+	background: transparent;
+	color: var(--pf-primary, #B5654A);
+	border-color: var(--pf-border, #DDD4C8);
+}
+
+.pf-form .pf-btn-secondary:hover {
+	border-color: var(--pf-primary, #B5654A);
+}
+
+/* ---- Messages ---- */
+.pf-form .pf-message {
+	padding: 14px 18px;
+	border-radius: var(--pf-radius, 8px);
+	font-size: 15px;
+	font-weight: 500;
+	margin-top: 16px;
+	display: none;
+}
+
+.pf-form .pf-message.is-success {
+	display: block;
+	background: #EBF5EE;
+	color: #1B5E20;
+	border: 1px solid #C8E6C9;
+}
+
+.pf-form .pf-message.is-error {
+	display: block;
+	background: #FCEBEB;
+	color: #B71C1C;
+	border: 1px solid #FFCDD2;
+}
+
+/* After submit */
+.pf-form.pf-submitted .pf-step-panel,
+.pf-form.pf-submitted .pf-steps-indicator {
+	display: none !important;
+}
+
+/* Elementor override - samo gdje je stvarno potrebno */
+.elementor .pf-form .pf-step-panel { display: none !important; }
+.elementor .pf-form .pf-step-panel.is-active { display: block !important; }
+.elementor .pf-form .pf-btn { border-radius: var(--pf-radius, 8px) !important; }
+
+/* Honeypot */
+.pf-form .pf-hp { display: none; }
