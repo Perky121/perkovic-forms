@@ -719,59 +719,113 @@ jQuery(function ($) {
 
 	// Panel za uvjet stranice — otvori se u desnom panelu
 	function openStepConditionPanel(step, stepIdx) {
+		selectedUid = null;
+		$('.pf-builder-field').removeClass('is-selected');
+
+		// Polja s prethodnih stranica (uvjet stranice ovisi o ranijim odgovorima)
 		var allFields = allFieldsFlat().filter(function (f) {
 			return f.type !== 'hidden' && f.type !== 'section_divider' && f.type !== 'html' && f.name;
 		});
 
-		var cond = step.condition || { field: '', operator: 'equals', value: '' };
+		var cond = step.condition || { field: '', operator: 'contains', value: '' };
+		var $panel = $('#pf-field-panel').empty();
 
-		var html = '<div class="pf-panel-section">'
-			+ '<div class="pf-panel-section-title">Uvjet za prikaz stranice ' + (stepIdx + 1) + '</div>'
-			+ '<p style="font-size:12px;color:#9C9182;margin:0 0 12px;">Stranica se prikazuje samo kad je uvjet ispunjen. Ostavi prazno da se uvijek prikazuje.</p>'
+		// Header
+		var $header = $('<div class="pf-panel-header"></div>');
+		$header.append('<h3>Uvjet za ' + escapeHtml(getStepLabel(step, stepIdx)) + '</h3>');
+		var $close = $('<button type="button" class="pf-panel-close" title="Zatvori">&times;</button>');
+		$close.on('click', function () { showPanelPlaceholder(); });
+		$header.append($close);
+		$panel.append($header);
 
-			+ '<div class="pf-field-group"><label>Polje</label>'
-			+ '<select id="pf-step-cond-field">'
-			+ '<option value="">(bez uvjeta)</option>';
+		var $body = $('<div class="pf-panel-tab-content"></div>');
+		$panel.append($body);
 
+		$body.append('<p class="description" style="margin:0 0 14px;font-size:12px;line-height:1.5;color:#6B5F58;">Ova stranica prikazat će se korisniku <strong>samo ako je uvjet ispunjen</strong>. Ako uvjet nije ispunjen, stranica se preskače. Ostavi polje prazno da se stranica uvijek prikazuje.</p>');
+
+		// Polje (select)
+		var $fieldSel = $('<select></select>');
+		$fieldSel.append('<option value="">— bez uvjeta (uvijek prikaži) —</option>');
 		allFields.forEach(function (f) {
-			html += '<option value="' + escapeAttr(f.name) + '"' + (cond.field === f.name ? ' selected' : '') + '>'
-				+ escapeHtml(f.label || f.name) + '</option>';
+			$fieldSel.append('<option value="' + escapeAttr(f.name) + '"' + (cond.field === f.name ? ' selected' : '') + '>'
+				+ escapeHtml(f.label || f.name) + '</option>');
+		});
+		$body.append(panelRow('Ovisi o pitanju', $fieldSel));
+
+		// Operator
+		var $opSel = $('<select></select>');
+		[['contains', 'sadrži odgovor'], ['equals', 'točno jednako'], ['not_equals', 'nije jednako']].forEach(function (o) {
+			$opSel.append('<option value="' + o[0] + '"' + (cond.operator === o[0] ? ' selected' : '') + '>' + o[1] + '</option>');
+		});
+		var $opRow = panelRow('Uvjet', $opSel);
+		$body.append($opRow);
+
+		// Vrijednost — dropdown opcija odabranog polja, ili tekst
+		var $valWrap = $('<div></div>');
+		var $valRow = panelRow('Vrijednost (odgovor)', $valWrap);
+		$body.append($valRow);
+
+		function renderValueControl() {
+			$valWrap.empty();
+			var selectedField = allFields.filter(function (f) { return f.name === $fieldSel.val(); })[0];
+			if (selectedField && selectedField.options && selectedField.options.length) {
+				// Dropdown s opcijama
+				var $valSel = $('<select class="pf-step-cond-value-ctrl"></select>');
+				selectedField.options.forEach(function (opt) {
+					$valSel.append('<option value="' + escapeAttr(opt) + '"' + (cond.value === opt ? ' selected' : '') + '>' + escapeHtml(opt) + '</option>');
+				});
+				$valWrap.append($valSel);
+			} else {
+				// Tekstualni unos
+				var $valInput = $('<input type="text" class="pf-step-cond-value-ctrl" placeholder="npr. Da">').val(cond.value || '');
+				$valWrap.append($valInput);
+			}
+		}
+		renderValueControl();
+
+		// Toggle vidljivosti uvjeta ovisno o odabiru polja
+		function toggleCondVisibility() {
+			if ($fieldSel.val()) {
+				$opRow.show(); $valRow.show();
+			} else {
+				$opRow.hide(); $valRow.hide();
+			}
+		}
+		toggleCondVisibility();
+
+		$fieldSel.on('change', function () {
+			cond.value = ''; // reset
+			renderValueControl();
+			toggleCondVisibility();
 		});
 
-		html += '</select></div>'
-			+ '<div class="pf-field-group"><label>Operator</label>'
-			+ '<select id="pf-step-cond-op">'
-			+ '<option value="equals"' + (cond.operator === 'equals' ? ' selected' : '') + '>jednako</option>'
-			+ '<option value="not_equals"' + (cond.operator === 'not_equals' ? ' selected' : '') + '>nije jednako</option>'
-			+ '<option value="contains"' + (cond.operator === 'contains' ? ' selected' : '') + '>sadrži</option>'
-			+ '</select></div>'
-			+ '<div class="pf-field-group"><label>Vrijednost</label>'
-			+ '<input type="text" id="pf-step-cond-value" value="' + escapeAttr(cond.value || '') + '" placeholder="npr. Da">'
-			+ '</div>'
-			+ '<button type="button" class="button button-primary" id="pf-step-cond-save" style="margin-top:8px;">Spremi uvjet</button>'
-			+ '<button type="button" class="button" id="pf-step-cond-clear" style="margin-top:8px;margin-left:6px;">Ukloni uvjet</button>'
-			+ '</div>';
-
-		$('#pf-field-settings').html(html);
-
-		$('#pf-step-cond-save').on('click', function () {
-			var fieldVal = $('#pf-step-cond-field').val();
+		// Gumbi
+		var $save = $('<button type="button" class="button button-primary" style="margin-top:12px;width:100%;">Spremi uvjet</button>');
+		$save.on('click', function () {
+			var fieldVal = $fieldSel.val();
 			if (!fieldVal) {
 				step.condition = null;
 			} else {
 				step.condition = {
 					field:    fieldVal,
-					operator: $('#pf-step-cond-op').val(),
-					value:    $('#pf-step-cond-value').val().trim(),
+					operator: $opSel.val(),
+					value:    $valWrap.find('.pf-step-cond-value-ctrl').val().trim(),
 				};
 			}
 			renderTabs();
+			showPanelPlaceholder();
 		});
+		$body.append($save);
 
-		$('#pf-step-cond-clear').on('click', function () {
-			step.condition = null;
-			renderTabs();
-		});
+		if (step.condition) {
+			var $clear = $('<button type="button" class="button" style="margin-top:8px;width:100%;">Ukloni uvjet</button>');
+			$clear.on('click', function () {
+				step.condition = null;
+				renderTabs();
+				showPanelPlaceholder();
+			});
+			$body.append($clear);
+		}
 	}
 
 	function renderCanvas() {

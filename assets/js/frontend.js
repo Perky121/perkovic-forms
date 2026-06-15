@@ -272,6 +272,44 @@
 		});
 	}
 
+	// Je li stranica (step panel) vidljiva prema svom uvjetu?
+	function isStepVisible(form, panel) {
+		var condField = panel.getAttribute('data-step-cond-field');
+		if (!condField) return true; // bez uvjeta = uvijek vidljiva
+		return conditionMet(
+			getFieldValue(form, condField),
+			panel.getAttribute('data-step-cond-op') || 'equals',
+			panel.getAttribute('data-step-cond-value') || ''
+		);
+	}
+
+	// Pronađi indeks sljedeće/prethodne vidljive stranice
+	function findVisibleStep(form, panels, fromIdx, direction) {
+		var i = fromIdx + direction;
+		while (i >= 0 && i < panels.length) {
+			if (isStepVisible(form, panels[i])) return i;
+			i += direction;
+		}
+		return -1;
+	}
+
+	// Ažuriraj step indicator da prikazuje samo vidljive stranice
+	function refreshStepIndicator(form, panels) {
+		var dots = form.querySelectorAll('.pf-step-dot');
+		var visibleCount = 0;
+		panels.forEach(function (panel, idx) {
+			var visible = isStepVisible(form, panel);
+			if (dots[idx]) {
+				dots[idx].style.display = visible ? '' : 'none';
+				var line = dots[idx].nextElementSibling;
+				if (line && line.classList.contains('pf-step-line')) {
+					line.style.display = visible ? '' : 'none';
+				}
+			}
+			if (visible) visibleCount++;
+		});
+	}
+
 	/* ---------------------------------------------------------
 	 *  Pomoćna: izračunaj % ispunjenosti forme
 	 * --------------------------------------------------------- */
@@ -481,15 +519,31 @@
 		populateUtmFields(form);
 		restoreDraft(form);
 		evaluateConditions(form);
+		refreshStepIndicator(form, panels);
 		initFieldTracking(form);
 
 		// Funnel tracking - vraća metode za Step i Submit
 		var funnel = initFunnelTracking(form, panels);
 
-		form.addEventListener('input',  function () { evaluateConditions(form); saveDraft(form); });
-		form.addEventListener('change', function () { evaluateConditions(form); saveDraft(form); });
+		form.addEventListener('input',  function () { evaluateConditions(form); refreshStepIndicator(form, panels); saveDraft(form); });
+		form.addEventListener('change', function () { evaluateConditions(form); refreshStepIndicator(form, panels); saveDraft(form); });
 
-		// Multi-step navigacija
+		// Multi-step navigacija (preskače stranice čiji uvjet nije ispunjen)
+		function updateStepButtons() {
+			panels.forEach(function (panel, idx) {
+				var nextBtn = panel.querySelector('.pf-next');
+				var submitBtn = panel.querySelector('.pf-submit');
+				if (!nextBtn || !submitBtn) return;
+				var hasNextVisible = findVisibleStep(form, panels, idx, +1) !== -1;
+				nextBtn.style.display   = hasNextVisible ? '' : 'none';
+				submitBtn.style.display = hasNextVisible ? 'none' : '';
+			});
+		}
+		updateStepButtons();
+
+		form.addEventListener('input',  updateStepButtons);
+		form.addEventListener('change', updateStepButtons);
+
 		panels.forEach(function (panel, panelIdx) {
 			var nextBtn = panel.querySelector('.pf-next');
 			var prevBtn = panel.querySelector('.pf-prev');
@@ -497,20 +551,19 @@
 			if (nextBtn) {
 				nextBtn.addEventListener('click', function () {
 					if (!validatePanel(panel)) return;
-					var nextPanel = panels[panelIdx + 1];
-					if (!nextPanel) return;
-					var nextStep = parseInt(nextPanel.getAttribute('data-step'), 10);
+					var nextIdx = findVisibleStep(form, panels, panelIdx, +1);
+					if (nextIdx === -1) return;
+					var nextStep = parseInt(panels[nextIdx].getAttribute('data-step'), 10);
 					goToStep(form, nextStep);
-
-					// EVENT 3: pf_step_complete
-					funnel.trackStepComplete(panelIdx, panelIdx + 1);
+					funnel.trackStepComplete(panelIdx, nextIdx);
 				});
 			}
 
 			if (prevBtn) {
 				prevBtn.addEventListener('click', function () {
-					var prevPanel = panels[panelIdx - 1];
-					if (prevPanel) goToStep(form, parseInt(prevPanel.getAttribute('data-step'), 10));
+					var prevIdx = findVisibleStep(form, panels, panelIdx, -1);
+					if (prevIdx === -1) return;
+					goToStep(form, parseInt(panels[prevIdx].getAttribute('data-step'), 10));
 				});
 			}
 		});

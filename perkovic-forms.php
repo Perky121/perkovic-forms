@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.7.8
+ * Version: 1.8.0
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.7.8' );
+define( 'PF_VERSION', '1.8.0' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -2481,6 +2481,7 @@ function pf_shortcode_form( $atts ) {
 
 					<?php if ( $i < $total_steps - 1 ) : ?>
 						<button type="button" class="pf-btn pf-btn-primary pf-next">Sljedeći korak</button>
+						<button type="submit" class="pf-btn pf-btn-primary pf-submit" style="display:none;"><?php echo esc_html( $submit_label ); ?></button>
 					<?php else : ?>
 						<button type="submit" class="pf-btn pf-btn-primary pf-submit"><?php echo esc_html( $submit_label ); ?></button>
 					<?php endif; ?>
@@ -2734,11 +2735,36 @@ function pf_handle_submit_form() {
 		}
 	}
 
+	// Polja koja pripadaju stranicama s neispunjenim uvjetom — ne validiraj kao obavezna
+	$skipped_field_names = array();
+	foreach ( (array) $structure['steps'] as $step ) {
+		$step_hidden = false;
+		if ( isset( $step['enabled'] ) && $step['enabled'] === false ) {
+			$step_hidden = true;
+		} elseif ( ! empty( $step['condition']['field'] ) && ! pf_condition_met( $step['condition'], $raw_values ) ) {
+			$step_hidden = true;
+		}
+		if ( $step_hidden ) {
+			foreach ( (array) $step['rows'] as $row ) {
+				foreach ( (array) $row['cells'] as $cell ) {
+					foreach ( (array) $cell as $f ) {
+						if ( ! empty( $f['name'] ) ) $skipped_field_names[ $f['name'] ] = true;
+					}
+				}
+			}
+		}
+	}
+
 	$clean_data = array();
 	$missing    = array();
 
 	foreach ( $fields as $field ) {
 		if ( $field['type'] === 'html' || $field['type'] === 'section_divider' ) {
+			continue;
+		}
+
+		// Preskoči polja na skrivenim/uvjetno-neispunjenim stranicama
+		if ( ! empty( $field['name'] ) && isset( $skipped_field_names[ $field['name'] ] ) ) {
 			continue;
 		}
 
