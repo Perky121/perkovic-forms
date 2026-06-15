@@ -1149,11 +1149,66 @@ jQuery(function ($) {
 	/* ---------------------------------------------------------
 	 *  Pregled forme (Desktop/Mobitel)
 	 * --------------------------------------------------------- */
+	function buildPreviewThemeCSS() {
+		var t = pfTheme || {};
+		var primary = t.primary_color || '#B5654A';
+		var bg      = t.bg_color      || '#FFFFFF';
+		var text    = t.text_color    || '#2B2420';
+		var labelC  = t.label_color   || text;
+		var border  = t.border_color  || '#DDD4C8';
+		var inputBg = t.input_bg      || '#FBF8F4';
+		var radius  = (t.border_radius || '8') + 'px';
+		var font    = t.font_family   || 'inherit';
+		var btnStyle= t.button_style  || 'filled';
+		var btnText = t.button_text   || '#FFFFFF';
+
+		var btnBg     = btnStyle === 'filled' ? primary : 'transparent';
+		var btnBorder = btnStyle === 'ghost'  ? 'transparent' : primary;
+		var btnTextC  = btnStyle === 'filled' ? btnText : primary;
+
+		// Label stil
+		var labelStyle = t.label_style || 'normal';
+		var labelCss;
+		if (labelStyle === 'uppercase') {
+			labelCss = 'font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;';
+		} else if (labelStyle === 'light') {
+			labelCss = 'font-weight:400;font-size:13px;text-transform:none;letter-spacing:0;';
+		} else {
+			labelCss = 'font-weight:600;font-size:14px;text-transform:none;letter-spacing:0;';
+		}
+		var inputFont = t.font_size === 'small' ? '13px' : t.font_size === 'large' ? '17px' : '15px';
+		var inputPad  = t.input_height === 'compact' ? '9px 12px' : t.input_height === 'spacious' ? '16px 16px' : '12px 14px';
+
+		// Google font import
+		var fontImport = '';
+		var fm = font.match(/'([^']+)'/);
+		if (fm && fm[1]) {
+			fontImport = '@import url("https://fonts.googleapis.com/css2?family=' + encodeURIComponent(fm[1]) + ':wght@400;500;600;700&display=swap");';
+		}
+
+		var S = '#pf-preview-frame';
+		return '<style>'
+			+ fontImport
+			+ S + ' .pf-form { font-family:' + font + ' !important; color:' + text + ' !important; }'
+			+ S + ' .pf-form .pf-field label, ' + S + ' .pf-form .pf-field legend { color:' + labelC + ' !important; ' + labelCss + ' !important; }'
+			+ S + ' .pf-form .pf-field input, ' + S + ' .pf-form .pf-field select, ' + S + ' .pf-form .pf-field textarea {'
+				+ 'border:1.5px solid ' + border + ' !important; border-radius:' + radius + ' !important; background:' + inputBg + ' !important;'
+				+ 'color:' + text + ' !important; padding:' + inputPad + ' !important; font-size:' + inputFont + ' !important; font-family:' + font + ' !important; }'
+			+ S + ' .pf-form .pf-btn-primary { background:' + btnBg + ' !important; color:' + btnTextC + ' !important; border:2px solid ' + btnBorder + ' !important; border-radius:' + radius + ' !important; }'
+			+ S + ' .pf-form .pf-btn-secondary { border:2px solid ' + border + ' !important; color:' + text + ' !important; border-radius:' + radius + ' !important; }'
+			+ S + ' .pf-form .pf-step-dot.is-active, ' + S + ' .pf-form .pf-step-dot.is-complete { background:' + primary + ' !important; color:#fff !important; }'
+			+ S + ' .pf-form .pf-step-line.is-complete { background:' + primary + ' !important; }'
+			+ S + ' .pf-form .pf-required-mark { color:' + primary + ' !important; }'
+			+ S + ' .pf-form .pf-inline-option input { accent-color:' + primary + ' !important; }'
+			+ '</style>';
+	}
+
 	function buildPreviewHTML() {
 		var totalSteps = pfSteps.length;
 		var submitLabel = $('#pf-submit-label').val() || 'Pošalji';
 
-		var html = '<form class="pf-form pf-preview-form" novalidate onsubmit="return false;">';
+		var html = buildPreviewThemeCSS();
+		html += '<form class="pf-form pf-preview-form" novalidate onsubmit="return false;">';
 
 		// Step indicator (samo ako ima više stranica)
 		if (totalSteps > 1) {
