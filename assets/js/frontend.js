@@ -560,8 +560,69 @@
 		// Funnel tracking - vraća metode za Step i Submit
 		var funnel = initFunnelTracking(form, panels);
 
-		form.addEventListener('input',  function () { evaluateConditions(form); refreshStepIndicator(form, panels); saveDraft(form); });
-		form.addEventListener('change', function () { evaluateConditions(form); refreshStepIndicator(form, panels); saveDraft(form); });
+		form.addEventListener('input',  function () { evaluateConditions(form); refreshStepIndicator(form, panels); updateStepButtons(); saveDraft(form); });
+		form.addEventListener('change', function (e) {
+			evaluateConditions(form);
+			refreshStepIndicator(form, panels);
+			updateStepButtons();
+			saveDraft(form);
+			// Auto-advance: provjeri je li auto-prebacivanje potrebno
+			checkAutoAdvance(e);
+		});
+
+		// Auto-advance: prebaci na sljedeću stranicu automatski ako:
+		// 1. Promijenio se input koji ima uvjetnu logiku na idućim stranicama
+		// 2. Trenutna stranica nema više vidljivih pitanja koja čekaju unos
+		function checkAutoAdvance(e) {
+			// Pronađi aktivni panel
+			var activePanel = null;
+			var activePanelIdx = -1;
+			panels.forEach(function (panel, idx) {
+				if (panel.classList.contains('is-active')) {
+					activePanel = panel;
+					activePanelIdx = idx;
+				}
+			});
+			if (!activePanel || activePanelIdx === -1) return;
+
+			// Postoji li sljedeća vidljiva stranica?
+			var nextIdx = findVisibleStep(form, panels, activePanelIdx, +1);
+			if (nextIdx === -1) return;
+
+			// Ima li sljedeća stranica uvjetnu logiku (data-step-cond-field)?
+			var nextPanel = panels[nextIdx];
+			var hasStepCond = !!nextPanel.getAttribute('data-step-cond-field');
+			if (!hasStepCond) return;
+
+			// Postoje li vidljiva, obavezna ili interaktivna polja na trenutnoj stranici koja još čekaju odgovor?
+			var visibleInputs = Array.prototype.slice.call(
+				activePanel.querySelectorAll('input:not([type="hidden"]):not([type="submit"]), select, textarea')
+			).filter(function (inp) {
+				var field = inp.closest('.pf-field');
+				return field && !field.classList.contains('pf-hidden');
+			});
+
+			// Ako je element koji se promijenio jedini input na stranici (ili su svi popunjeni), auto-advance
+			var allFilled = visibleInputs.every(function (inp) {
+				if (inp.type === 'checkbox' || inp.type === 'radio') {
+					// Grupiraj po name — dovoljno da je jedan označen
+					var name = inp.name;
+					var group = activePanel.querySelectorAll('[name="' + name + '"]');
+					return Array.prototype.some.call(group, function (g) { return g.checked; });
+				}
+				return inp.value && inp.value.trim() !== '';
+			});
+
+			if (allFilled && visibleInputs.length > 0) {
+				// Mali delay da korisnik vidi što je odabrao
+				setTimeout(function () {
+					if (!validatePanel(activePanel)) return;
+					var step = parseInt(nextPanel.getAttribute('data-step'), 10);
+					goToStep(form, step);
+					funnel.trackStepComplete(activePanelIdx, nextIdx);
+				}, 350);
+			}
+		}
 
 		// Multi-step navigacija (preskače stranice čiji uvjet nije ispunjen)
 		function updateStepButtons() {

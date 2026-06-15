@@ -1572,11 +1572,134 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 	transition: max-width 0.2s ease;
 }
 
-.pf-preview-frame.is-mobile { max-width: 360px; padding: 20px; }
+/* Reset WP admin CSS interference */
+.pf-preview-frame,
+.pf-preview-frame * {
+	box-sizing: border-box;
+}
+
+/* Step dots — override WP admin li/div styles */
+.pf-preview-frame .pf-step-dot {
+	width: 30px !important;
+	height: 30px !important;
+	min-width: 30px !important;
+	min-height: 30px !important;
+	max-width: 30px !important;
+	max-height: 30px !important;
+	border-radius: 50% !important;
+	background: #E8E2DC !important;
+	color: #9C9182 !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	font-weight: 700 !important;
+	font-size: 12px !important;
+	line-height: 1 !important;
+	flex-shrink: 0 !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+	list-style: none !important;
+	font-family: 'Montserrat', sans-serif !important;
+}
+
+.pf-preview-frame .pf-step-dot.is-active,
+.pf-preview-frame .pf-step-dot.is-complete {
+	background: #B5654A !important;
+	color: #fff !important;
+}
+
+.pf-preview-frame .pf-steps-indicator {
+	display: flex !important;
+	align-items: center !important;
+	margin-bottom: 24px !important;
+	padding: 0 !important;
+	background: none !important;
+	border: none !important;
+	list-style: none !important;
+}
+
+.pf-preview-frame .pf-step-line {
+	flex: 1 !important;
+	height: 1px !important;
+	background: #E8E2DC !important;
+	margin: 0 6px !important;
+	border: none !important;
+	min-height: 0 !important;
+}
+
+/* Reset inputs/selects in preview */
+.pf-preview-frame .pf-field input[type="text"],
+.pf-preview-frame .pf-field input[type="email"],
+.pf-preview-frame .pf-field input[type="tel"],
+.pf-preview-frame .pf-field input[type="number"],
+.pf-preview-frame .pf-field textarea,
+.pf-preview-frame .pf-field select {
+	height: auto !important;
+	min-height: 0 !important;
+	max-height: none !important;
+	line-height: 1.5 !important;
+	box-shadow: none !important;
+	outline: none !important;
+	font-family: 'Montserrat', sans-serif !important;
+}
+
+/* Labels/legends */
+.pf-preview-frame .pf-field label {
+	display: block !important;
+	font-size: 14px !important;
+	font-weight: 600 !important;
+	text-transform: none !important;
+	letter-spacing: 0 !important;
+	color: #2B2420 !important;
+	margin-bottom: 6px !important;
+	padding: 0 !important;
+	line-height: 1.4 !important;
+}
+
+.pf-preview-frame .pf-field legend {
+	display: block !important;
+	font-size: 14px !important;
+	font-weight: 600 !important;
+	text-transform: none !important;
+	letter-spacing: 0 !important;
+	color: #2B2420 !important;
+	margin-bottom: 12px !important;
+	padding: 0 !important;
+	width: 100% !important;
+	float: none !important;
+}
+
+/* Fix fieldset */
+.pf-preview-frame fieldset {
+	border: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+}
+
+/* Inline options */
+.pf-preview-frame .pf-inline-option {
+	display: flex !important;
+	align-items: center !important;
+	padding: 10px 14px !important;
+	margin-bottom: 8px !important;
+	border-radius: 6px !important;
+	cursor: pointer !important;
+	list-style: none !important;
+}
+
+/* Fields */
+.pf-preview-frame .pf-field {
+	margin-bottom: 20px !important;
+	padding: 0 !important;
+	border: none !important;
+	background: none !important;
+}
+
 .pf-preview-frame .pf-step-panel { display: none; }
 .pf-preview-frame .pf-step-panel.is-active { display: block !important; }
-.pf-preview-step-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#C9BBA8; margin:0 0 14px; }
 .pf-preview-frame .pf-step-actions { margin-top: 20px; }
+.pf-preview-frame.is-mobile { max-width: 360px; padding: 20px; }
 .pf-preview-frame.is-mobile .pf-row.pf-cols-2,
 .pf-preview-frame.is-mobile .pf-row.pf-cols-3 { grid-template-columns: 1fr; }
 
