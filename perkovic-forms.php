@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.6.3
+ * Version: 1.6.4
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.6.3' );
+define( 'PF_VERSION', '1.6.4' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -1351,158 +1351,143 @@ function pf_render_form_edit_page() {
 			     TAB: IZGLED
 			     ============================================================ -->
 			<div class="pf-edit-tab-content" data-tab="theme" style="display:none;">
-				<div class="pf-theme-editor">
+				<div class="pf-theme-layout">
 
-					<div class="pf-theme-presets-row">
-						<span class="pf-theme-section-label">Gotove teme</span>
-						<div class="pf-preset-grid">
-							<?php foreach ( pf_theme_presets() as $key => $preset ) : ?>
-								<button type="button" class="pf-preset-card" data-preset="<?php echo esc_attr( $key ); ?>">
-									<span class="pf-preset-swatch">
-										<span style="background:<?php echo esc_attr( $preset['bg_color'] ); ?>;"></span>
-										<span style="background:<?php echo esc_attr( $preset['primary_color'] ); ?>;"></span>
-										<span style="background:<?php echo esc_attr( $preset['text_color'] ); ?>;opacity:.35;"></span>
-									</span>
-									<span class="pf-preset-label"><?php echo esc_html( $preset['label'] ); ?></span>
-								</button>
-							<?php endforeach; ?>
-						</div>
-					</div>
+					<!-- Lijeva kolona: kontrole -->
+					<div class="pf-theme-sidebar">
 
-					<div class="pf-theme-body">
-						<div class="pf-theme-controls">
-
-							<div class="pf-theme-section">
-								<div class="pf-theme-section-title">Boje</div>
-								<?php
-								$color_fields = array(
-									'primary_color' => 'Primarna boja',
-									'bg_color'      => 'Pozadina forme',
-									'text_color'    => 'Tekst',
-									'label_color'   => 'Labelice',
-									'border_color'  => 'Obrub polja',
-									'input_bg'      => 'Pozadina inputa',
-								);
-								foreach ( $color_fields as $prop => $lbl ) : ?>
-									<div class="pf-theme-row">
-										<label class="pf-theme-row-label"><?php echo esc_html( $lbl ); ?></label>
-										<div class="pf-color-wrap">
-											<input type="color" class="pf-color-input" data-prop="<?php echo esc_attr( $prop ); ?>"
-											       value="<?php echo esc_attr( $theme[ $prop ] ); ?>">
-											<input type="text" class="pf-color-text" data-prop="<?php echo esc_attr( $prop ); ?>"
-											       value="<?php echo esc_attr( $theme[ $prop ] ); ?>" maxlength="7">
-										</div>
-									</div>
+						<!-- Gotove teme -->
+						<div class="pf-theme-block">
+							<div class="pf-theme-block-title">Gotove teme</div>
+							<div class="pf-preset-grid">
+								<?php foreach ( pf_theme_presets() as $key => $preset ) : ?>
+									<button type="button" class="pf-preset-card" data-preset="<?php echo esc_attr( $key ); ?>">
+										<span class="pf-preset-swatch">
+											<span style="background:<?php echo esc_attr( $preset['bg_color'] ); ?>;border-radius:3px 0 0 3px;"></span>
+											<span style="background:<?php echo esc_attr( $preset['primary_color'] ); ?>;"></span>
+											<span style="background:<?php echo esc_attr( $preset['text_color'] ); ?>;opacity:.3;border-radius:0 3px 3px 0;"></span>
+										</span>
+										<span class="pf-preset-label"><?php echo esc_html( $preset['label'] ); ?></span>
+									</button>
 								<?php endforeach; ?>
 							</div>
-
-							<div class="pf-theme-section">
-								<div class="pf-theme-section-title">Oblik i tipografija</div>
-								<div class="pf-theme-row">
-									<label class="pf-theme-row-label">Zaobljenost rubova</label>
-									<div class="pf-range-wrap">
-										<input type="range" class="pf-range-input" data-prop="border_radius"
-										       min="0" max="24" step="2" value="<?php echo esc_attr( $theme['border_radius'] ); ?>">
-										<span class="pf-range-val" id="pf-radius-label"><?php echo esc_html( $theme['border_radius'] ); ?>px</span>
-									</div>
-								</div>
-								<div class="pf-theme-row">
-									<label class="pf-theme-row-label">Font</label>
-									<select class="pf-select-input" data-prop="font_family">
-										<?php foreach ( array(
-											'inherit'                        => 'Tema stranice (default)',
-											"'Inter', sans-serif"            => 'Inter — Moderno, čisto',
-											"'Montserrat', sans-serif"       => 'Montserrat — Snažno, pouzdano',
-											"'Lato', sans-serif"             => 'Lato — Toplo, prijazno',
-											"'Nunito', sans-serif"           => 'Nunito — Zaobljeno, mekano',
-											"'Raleway', sans-serif"          => 'Raleway — Elegantno, lagano',
-											"'Roboto', sans-serif"           => 'Roboto — Neutralno, tehničko',
-											"'Open Sans', sans-serif"        => 'Open Sans — Čitljivo, pouzdano',
-											"'Playfair Display', serif"      => 'Playfair Display — Premium, serif',
-											"'DM Sans', sans-serif"          => 'DM Sans — Minimalistično',
-										) as $val => $lbl ) : ?>
-											<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $theme['font_family'], $val ); ?>><?php echo esc_html( $lbl ); ?></option>
-										<?php endforeach; ?>
-									</select>
-								</div>
-							</div>
-
-							<div class="pf-theme-section">
-								<div class="pf-theme-section-title">Labelice iznad polja</div>
-								<div class="pf-theme-row">
-									<label class="pf-theme-row-label">Stil teksta</label>
-									<div class="pf-label-style-toggle">
-										<?php foreach ( array(
-											'normal'    => 'Normal',
-											'uppercase' => 'UPPERCASE',
-											'light'     => 'Light',
-										) as $val => $lbl ) : ?>
-											<button type="button"
-											        class="pf-label-style-opt <?php echo ( isset( $theme['label_style'] ) ? $theme['label_style'] : 'normal' ) === $val ? 'is-active' : ''; ?>"
-											        data-val="<?php echo esc_attr( $val ); ?>"
-											        style="font-weight: <?php echo $val === 'light' ? '400' : ( $val === 'uppercase' ? '700' : '600' ); ?>; text-transform: <?php echo $val === 'uppercase' ? 'uppercase' : 'none'; ?>; font-size: <?php echo $val === 'uppercase' ? '10px' : '13px'; ?>">
-												<?php echo esc_html( $lbl ); ?>
-											</button>
-										<?php endforeach; ?>
-									</div>
-								</div>
-								<div class="pf-theme-row">
-									<label class="pf-theme-row-label">Veličina teksta</label>
-									<div class="pf-font-size-toggle">
-										<?php foreach ( array(
-											'small'  => 'S',
-											'medium' => 'M',
-											'large'  => 'L',
-										) as $val => $lbl ) : ?>
-											<button type="button"
-											        class="pf-size-opt <?php echo ( isset( $theme['font_size'] ) ? $theme['font_size'] : 'medium' ) === $val ? 'is-active' : ''; ?>"
-											        data-val="<?php echo esc_attr( $val ); ?>">
-												<?php echo esc_html( $lbl ); ?>
-											</button>
-										<?php endforeach; ?>
-									</div>
-								</div>
-							</div>
-
-							<div class="pf-theme-section">
-								<div class="pf-theme-section-title">Inputi</div>
-								<div class="pf-theme-row">
-									<label class="pf-theme-row-label">Visina polja</label>
-									<div class="pf-input-height-toggle">
-										<?php foreach ( array(
-											'compact'  => 'Kompaktno',
-											'normal'   => 'Normalno',
-											'spacious' => 'Prostrano',
-										) as $val => $lbl ) : ?>
-											<button type="button"
-											        class="pf-height-opt <?php echo ( isset( $theme['input_height'] ) ? $theme['input_height'] : 'normal' ) === $val ? 'is-active' : ''; ?>"
-											        data-val="<?php echo esc_attr( $val ); ?>">
-												<?php echo esc_html( $lbl ); ?>
-											</button>
-										<?php endforeach; ?>
-									</div>
-								</div>
-							</div>
-
-							<div class="pf-theme-section">
-								<div class="pf-theme-section-title">Gumb za slanje</div>
-								<div class="pf-theme-row">
-									<label class="pf-theme-row-label">Stil</label>
-									<div class="pf-btn-style-toggle">
-										<?php foreach ( array( 'filled' => 'Pun', 'outline' => 'Obrub', 'ghost' => 'Ghost' ) as $val => $lbl ) : ?>
-											<button type="button" class="pf-btn-style-opt <?php echo $theme['button_style'] === $val ? 'is-active' : ''; ?>"
-											        data-val="<?php echo esc_attr( $val ); ?>"><?php echo esc_html( $lbl ); ?></button>
-										<?php endforeach; ?>
-									</div>
-								</div>
-							</div>
-
 						</div>
 
-						<div class="pf-theme-preview-col">
-							<div class="pf-theme-preview-label">Pregled uživo</div>
-							<div class="pf-theme-preview-frame" id="pf-theme-preview"></div>
+						<!-- Boje -->
+						<div class="pf-theme-block">
+							<div class="pf-theme-block-title">Boje</div>
+							<?php
+							$color_fields = array(
+								'primary_color' => 'Primarna',
+								'bg_color'      => 'Pozadina',
+								'text_color'    => 'Tekst',
+								'label_color'   => 'Labelice',
+								'border_color'  => 'Obrub',
+								'input_bg'      => 'Input pozadina',
+							);
+							foreach ( $color_fields as $prop => $lbl ) : ?>
+								<div class="pf-color-row">
+									<span class="pf-color-row-label"><?php echo esc_html( $lbl ); ?></span>
+									<div class="pf-color-wrap">
+										<input type="color" class="pf-color-input" data-prop="<?php echo esc_attr( $prop ); ?>"
+										       value="<?php echo esc_attr( $theme[ $prop ] ?? '#ffffff' ); ?>">
+										<input type="text" class="pf-color-text" data-prop="<?php echo esc_attr( $prop ); ?>"
+										       value="<?php echo esc_attr( $theme[ $prop ] ?? '#ffffff' ); ?>" maxlength="7">
+									</div>
+								</div>
+							<?php endforeach; ?>
 						</div>
+
+						<!-- Font -->
+						<div class="pf-theme-block">
+							<div class="pf-theme-block-title">Font</div>
+							<select class="pf-select-input pf-select-full" data-prop="font_family">
+								<?php foreach ( array(
+									'inherit'                   => 'Tema stranice (default)',
+									"'Inter', sans-serif"       => 'Inter',
+									"'Montserrat', sans-serif"  => 'Montserrat',
+									"'Lato', sans-serif"        => 'Lato',
+									"'Nunito', sans-serif"      => 'Nunito',
+									"'Raleway', sans-serif"     => 'Raleway',
+									"'Roboto', sans-serif"      => 'Roboto',
+									"'Open Sans', sans-serif"   => 'Open Sans',
+									"'Playfair Display', serif" => 'Playfair Display',
+									"'DM Sans', sans-serif"     => 'DM Sans',
+								) as $val => $lbl ) : ?>
+									<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $theme['font_family'] ?? 'inherit', $val ); ?>><?php echo esc_html( $lbl ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+
+						<!-- Oblik -->
+						<div class="pf-theme-block">
+							<div class="pf-theme-block-title">Oblik</div>
+							<div class="pf-theme-option-row">
+								<span>Zaobljenost</span>
+								<div class="pf-range-wrap">
+									<input type="range" class="pf-range-input" data-prop="border_radius"
+									       min="0" max="24" step="2" value="<?php echo esc_attr( $theme['border_radius'] ?? '8' ); ?>">
+									<span class="pf-range-val" id="pf-radius-label"><?php echo esc_html( $theme['border_radius'] ?? '8' ); ?>px</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Tipografija labela -->
+						<div class="pf-theme-block">
+							<div class="pf-theme-block-title">Labelice</div>
+							<div class="pf-theme-option-row">
+								<span>Stil</span>
+								<div class="pf-toggle-group">
+									<?php foreach ( array( 'normal' => 'Normal', 'uppercase' => 'CAPS', 'light' => 'Light' ) as $val => $lbl ) : ?>
+										<button type="button" class="pf-toggle-opt pf-label-style-opt <?php echo ( $theme['label_style'] ?? 'normal' ) === $val ? 'is-active' : ''; ?>" data-val="<?php echo esc_attr( $val ); ?>"><?php echo esc_html( $lbl ); ?></button>
+									<?php endforeach; ?>
+								</div>
+							</div>
+							<div class="pf-theme-option-row">
+								<span>Veličina</span>
+								<div class="pf-toggle-group">
+									<?php foreach ( array( 'small' => 'S', 'medium' => 'M', 'large' => 'L' ) as $val => $lbl ) : ?>
+										<button type="button" class="pf-toggle-opt pf-size-opt <?php echo ( $theme['font_size'] ?? 'medium' ) === $val ? 'is-active' : ''; ?>" data-val="<?php echo esc_attr( $val ); ?>"><?php echo esc_html( $lbl ); ?></button>
+									<?php endforeach; ?>
+								</div>
+							</div>
+						</div>
+
+						<!-- Inputi -->
+						<div class="pf-theme-block">
+							<div class="pf-theme-block-title">Polja za unos</div>
+							<div class="pf-theme-option-row">
+								<span>Visina</span>
+								<div class="pf-toggle-group">
+									<?php foreach ( array( 'compact' => 'Zbijeno', 'normal' => 'Normalno', 'spacious' => 'Prostrano' ) as $val => $lbl ) : ?>
+										<button type="button" class="pf-toggle-opt pf-height-opt <?php echo ( $theme['input_height'] ?? 'normal' ) === $val ? 'is-active' : ''; ?>" data-val="<?php echo esc_attr( $val ); ?>"><?php echo esc_html( $lbl ); ?></button>
+									<?php endforeach; ?>
+								</div>
+							</div>
+						</div>
+
+						<!-- Gumb -->
+						<div class="pf-theme-block">
+							<div class="pf-theme-block-title">Gumb za slanje</div>
+							<div class="pf-theme-option-row">
+								<span>Stil</span>
+								<div class="pf-toggle-group">
+									<?php foreach ( array( 'filled' => 'Pun', 'outline' => 'Obrub', 'ghost' => 'Ghost' ) as $val => $lbl ) : ?>
+										<button type="button" class="pf-toggle-opt pf-btn-style-opt <?php echo $theme['button_style'] === $val ? 'is-active' : ''; ?>" data-val="<?php echo esc_attr( $val ); ?>"><?php echo esc_html( $lbl ); ?></button>
+									<?php endforeach; ?>
+								</div>
+							</div>
+						</div>
+
+					</div><!-- /sidebar -->
+
+					<!-- Desna kolona: live preview -->
+					<div class="pf-theme-preview-col">
+						<div class="pf-theme-preview-label">
+							<span>Pregled uživo</span>
+							<span class="pf-theme-preview-note">Ažurira se odmah</span>
+						</div>
+						<div class="pf-theme-preview-frame" id="pf-theme-preview"></div>
 					</div>
 
 				</div>

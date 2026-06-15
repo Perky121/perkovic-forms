@@ -1334,24 +1334,88 @@ jQuery(function ($) {
 
 	function renderThemePreview() {
 		var t = pfTheme;
-		var btnBg     = t.button_style === 'filled' ? t.primary_color : 'transparent';
-		var btnBorder = t.button_style === 'ghost'  ? 'transparent'   : t.primary_color;
-		var btnText   = t.button_style === 'filled' ? (t.button_text || '#fff') : t.primary_color;
-		var radius    = (t.border_radius || '8') + 'px';
+		var radius   = (t.border_radius || '8') + 'px';
+		var font     = t.font_family || 'inherit';
+		var btnBg    = t.button_style === 'filled' ? (t.primary_color || '#B5654A') : 'transparent';
+		var btnBorder= t.button_style === 'ghost'  ? 'transparent' : (t.primary_color || '#B5654A');
+		var btnText  = t.button_style === 'filled' ? (t.button_text || '#fff') : (t.primary_color || '#B5654A');
 
-		var html = '<div style="font-family:' + escapeAttr(t.font_family || 'inherit') + ';background:' + escapeAttr(t.bg_color || '#fff') + ';color:' + escapeAttr(t.text_color || '#222') + ';padding:20px;border-radius:' + radius + ';">';
-		html += '<div style="margin-bottom:14px;">';
-		html += '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:' + escapeAttr(t.label_color || t.text_color || '#222') + ';">Ime i prezime *</label>';
-		html += '<input disabled placeholder="Ivica Ivić" style="width:100%;padding:10px;border:1px solid ' + escapeAttr(t.border_color || '#ccc') + ';border-radius:' + radius + ';background:' + escapeAttr(t.input_bg || '#fff') + ';color:' + escapeAttr(t.text_color || '#222') + ';font-size:14px;">';
-		html += '</div>';
-		html += '<div style="margin-bottom:14px;">';
-		html += '<label style="display:block;font-weight:600;font-size:13px;margin-bottom:5px;color:' + escapeAttr(t.label_color || t.text_color || '#222') + ';">Tip projekta *</label>';
-		html += '<select disabled style="width:100%;padding:10px;border:1px solid ' + escapeAttr(t.border_color || '#ccc') + ';border-radius:' + radius + ';background:' + escapeAttr(t.input_bg || '#fff') + ';color:' + escapeAttr(t.text_color || '#222') + ';font-size:14px;"><option>Kuhinja</option></select>';
-		html += '</div>';
-		html += '<button disabled style="background:' + escapeAttr(btnBg) + ';color:' + escapeAttr(btnText) + ';border:2px solid ' + escapeAttr(btnBorder) + ';border-radius:' + radius + ';padding:12px 28px;font-size:15px;font-weight:600;cursor:pointer;width:100%;">';
-		html += 'Pošalji upit</button>';
+		// Label stil
+		var labelStyle = t.label_style || 'normal';
+		var labelFontSize, labelFontWeight, labelTransform, labelSpacing;
+		if (labelStyle === 'uppercase') {
+			labelFontSize = '10px'; labelFontWeight = '700';
+			labelTransform = 'uppercase'; labelSpacing = '0.08em';
+		} else if (labelStyle === 'light') {
+			labelFontSize = '13px'; labelFontWeight = '400';
+			labelTransform = 'none'; labelSpacing = '0';
+		} else {
+			labelFontSize = '14px'; labelFontWeight = '600';
+			labelTransform = 'none'; labelSpacing = '0';
+		}
+
+		// Input veličina
+		var inputFontSize = t.font_size === 'small' ? '13px' : t.font_size === 'large' ? '17px' : '15px';
+		var inputPadding  = t.input_height === 'compact' ? '9px 12px' : t.input_height === 'spacious' ? '16px 16px' : '11px 14px';
+
+		// Google Font import ako treba
+		var fontImport = '';
+		var fontMatch = font.match(/'([^']+)'/);
+		if (fontMatch && fontMatch[1] !== 'inherit') {
+			fontImport = '<style>@import url("https://fonts.googleapis.com/css2?family=' + encodeURIComponent(fontMatch[1]) + ':wght@400;500;600;700&display=swap");</style>';
+		}
+
+		var bg      = t.bg_color    || '#fff';
+		var textClr = t.text_color  || '#2B2420';
+		var labelClr= t.label_color || textClr;
+		var border  = t.border_color|| '#DDD4C8';
+		var inputBg = t.input_bg    || '#FBF8F4';
+		var primary = t.primary_color || '#B5654A';
+
+		function lbl(text) {
+			return '<label style="display:block;font-family:' + escapeAttr(font) + ';font-size:' + labelFontSize + ';font-weight:' + labelFontWeight + ';text-transform:' + labelTransform + ';letter-spacing:' + labelSpacing + ';color:' + escapeAttr(labelClr) + ';margin-bottom:6px;">' + escapeHtml(text) + ' <span style="color:' + escapeAttr(primary) + '">*</span></label>';
+		}
+
+		function inp(placeholder) {
+			return '<input disabled placeholder="' + escapeAttr(placeholder) + '" style="display:block;width:100%;padding:' + inputPadding + ';font-family:' + escapeAttr(font) + ';font-size:' + inputFontSize + ';border:1.5px solid ' + escapeAttr(border) + ';border-radius:' + radius + ';background:' + escapeAttr(inputBg) + ';color:' + escapeAttr(textClr) + ';box-sizing:border-box;-webkit-appearance:none;">';
+		}
+
+		function sel(option) {
+			return '<select disabled style="display:block;width:100%;padding:' + inputPadding + ';font-family:' + escapeAttr(font) + ';font-size:' + inputFontSize + ';border:1.5px solid ' + escapeAttr(border) + ';border-radius:' + radius + ';background:' + escapeAttr(inputBg) + ';color:' + escapeAttr(textClr) + ';box-sizing:border-box;-webkit-appearance:none;"><option>' + escapeHtml(option) + '</option></select>';
+		}
+
+		function radio(text) {
+			return '<label style="display:flex;align-items:center;gap:8px;font-family:' + escapeAttr(font) + ';font-size:' + inputFontSize + ';color:' + escapeAttr(textClr) + ';margin-bottom:6px;"><input type="radio" disabled style="accent-color:' + escapeAttr(primary) + ';"> ' + escapeHtml(text) + '</label>';
+		}
+
+		var html = fontImport;
+		// Wrapper
+		html += '<div style="font-family:' + escapeAttr(font) + ';background:' + escapeAttr(bg) + ';color:' + escapeAttr(textClr) + ';padding:24px;border-radius:' + radius + ';">';
+
+		// Step indicator
+		html += '<div style="display:flex;align-items:center;margin-bottom:20px;">';
+		html += '<div style="width:28px;height:28px;border-radius:50%;background:' + escapeAttr(primary) + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:' + escapeAttr(font) + ';flex-shrink:0;">1</div>';
+		html += '<div style="flex:1;height:1px;background:' + escapeAttr(border) + ';margin:0 8px;"></div>';
+		html += '<div style="width:28px;height:28px;border-radius:50%;background:' + escapeAttr(border) + ';color:#999;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:' + escapeAttr(font) + ';flex-shrink:0;">2</div>';
 		html += '</div>';
 
+		// Polje 1 — text
+		html += '<div style="margin-bottom:14px;">' + lbl('Ime i prezime') + inp('Ivica Ivić') + '</div>';
+
+		// Polje 2 — select
+		html += '<div style="margin-bottom:14px;">' + lbl('Vrsta projekta') + sel('Kuhinja po mjeri') + '</div>';
+
+		// Polje 3 — radio
+		html += '<div style="margin-bottom:14px;">';
+		html += lbl('Imate li dizajn?');
+		html += radio('Da, imam dizajn');
+		html += radio('Trebam dizajn');
+		html += '</div>';
+
+		// Gumb
+		html += '<button disabled style="width:100%;background:' + escapeAttr(btnBg) + ';color:' + escapeAttr(btnText) + ';border:2px solid ' + escapeAttr(btnBorder) + ';border-radius:' + radius + ';padding:' + inputPadding + ';font-family:' + escapeAttr(font) + ';font-size:' + inputFontSize + ';font-weight:700;letter-spacing:0.03em;cursor:pointer;box-sizing:border-box;">Sljedeći korak →</button>';
+
+		html += '</div>';
 		$('#pf-theme-preview').html(html);
 	}
 
