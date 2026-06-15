@@ -355,7 +355,7 @@ jQuery(function ($) {
 			$toolbar.append('<span class="pf-bf-required-badge">obavezno</span>');
 		}
 
-		if (field.condition && field.condition.field) {
+		if (field.condition && (field.condition.field || (field.condition.rules && field.condition.rules.length))) {
 			$toolbar.append('<span class="pf-bf-cond-badge" title="Polje ima uvjetnu logiku">uvjetno</span>');
 		}
 

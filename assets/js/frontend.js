@@ -165,10 +165,13 @@
 	 * --------------------------------------------------------- */
 	function validatePanel(panel) {
 		var valid = true;
+		var firstInvalid = null;
 		panel.querySelectorAll('input, select, textarea').forEach(function (field) {
 			field.classList.remove('pf-invalid');
 			var fieldWrap = field.closest('.pf-field');
+			if (fieldWrap) fieldWrap.classList.remove('pf-invalid');
 			if (fieldWrap && (fieldWrap.classList.contains('pf-hidden') || fieldWrap.classList.contains('pf-field-section-divider'))) return;
+			if (field.style.display === 'none' && field.type !== 'hidden') return;
 			if (!field.hasAttribute('required')) return;
 
 			if (field.type === 'checkbox' || field.type === 'radio') {
@@ -177,7 +180,8 @@
 				group.forEach(function (g) { if (g.checked) checked = true; });
 				if (!checked) {
 					valid = false;
-					group.forEach(function (g) { g.closest('.pf-field').classList.add('pf-invalid'); });
+					if (fieldWrap) fieldWrap.classList.add('pf-invalid');
+					if (!firstInvalid) firstInvalid = fieldWrap || field;
 				}
 				return;
 			}
@@ -185,13 +189,43 @@
 			if (!field.value || !field.value.trim()) {
 				valid = false;
 				field.classList.add('pf-invalid');
+				if (fieldWrap) fieldWrap.classList.add('pf-invalid');
+				if (!firstInvalid) firstInvalid = field;
 			} else if (field.type === 'email') {
 				if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
 					valid = false;
 					field.classList.add('pf-invalid');
+					if (fieldWrap) fieldWrap.classList.add('pf-invalid');
+					if (!firstInvalid) firstInvalid = field;
+				}
+			} else if (field.classList.contains('pf-date-input')) {
+				// DD/MM/YYYY validacija
+				var m = field.value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+				var validDate = false;
+				if (m) {
+					var d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+					var dt = new Date(y, mo - 1, d);
+					validDate = dt.getDate() === d && dt.getMonth() === mo - 1 && dt.getFullYear() === y && mo >= 1 && mo <= 12;
+				}
+				if (!validDate) {
+					valid = false;
+					field.classList.add('pf-invalid');
+					if (fieldWrap) fieldWrap.classList.add('pf-invalid');
+					if (!firstInvalid) firstInvalid = field;
 				}
 			}
 		});
+
+		// Scroll do prve greške + fokus
+		if (!valid && firstInvalid) {
+			try {
+				firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				if (typeof firstInvalid.focus === 'function' && firstInvalid.tagName) {
+					var focusEl = firstInvalid.querySelector ? (firstInvalid.querySelector('input, select, textarea') || firstInvalid) : firstInvalid;
+					setTimeout(function () { try { focusEl.focus({ preventScroll: true }); } catch(e){} }, 300);
+				}
+			} catch (e) {}
+		}
 		return valid;
 	}
 
@@ -697,6 +731,7 @@
 						msgBox.classList.add('is-success');
 						form.classList.add('pf-submitted');
 						clearDraft(formId);
+						try { msgBox.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e){}
 
 						// Označi kao završeno (blokira abandon event)
 						funnel.markSubmitted();
