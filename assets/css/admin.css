@@ -1163,33 +1163,33 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 	min-height: 600px;
 }
 
-/* Sidebar — fiksna širina, scroll unutar */
+/* Sidebar — šira, više prostora za opcije */
 .pf-theme-sidebar {
-	width: 260px;
+	width: 380px;
 	flex-shrink: 0;
 	background: #FAFAF9;
 	border-right: 1px solid #E5DFD8;
 	overflow-y: auto;
-	padding: 12px;
+	padding: 18px;
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: 14px;
 }
 
 .pf-theme-block {
 	background: #fff;
 	border: 1px solid #E5DFD8;
-	border-radius: 8px;
+	border-radius: 10px;
 	overflow: hidden;
 }
 
 .pf-theme-block-title {
-	font-size: 10px;
+	font-size: 11px;
 	font-weight: 700;
 	text-transform: uppercase;
-	letter-spacing: 0.07em;
-	color: #9C9182;
-	padding: 8px 12px;
+	letter-spacing: 0.08em;
+	color: #B5654A;
+	padding: 12px 16px;
 	background: #F7F3EF;
 	border-bottom: 1px solid #E5DFD8;
 }
@@ -1198,67 +1198,69 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 .pf-preset-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
-	gap: 5px;
-	padding: 8px;
+	gap: 8px;
+	padding: 14px;
 }
 
 .pf-preset-card {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 4px;
-	padding: 7px 5px;
+	gap: 7px;
+	padding: 12px 8px;
 	border: 1.5px solid #E5DFD8;
-	border-radius: 6px;
+	border-radius: 8px;
 	background: #fff;
 	cursor: pointer;
-	transition: border-color 0.12s;
+	transition: border-color 0.12s, box-shadow 0.12s;
 }
 
 .pf-preset-card:hover,
 .pf-preset-card.is-active {
 	border-color: #B5654A;
+	box-shadow: 0 0 0 2px rgba(181,101,74,0.10);
 }
 
 .pf-preset-swatch {
 	display: flex;
-	width: 36px;
-	height: 18px;
-	border-radius: 3px;
+	width: 48px;
+	height: 24px;
+	border-radius: 4px;
 	overflow: hidden;
 	border: 1px solid rgba(0,0,0,0.08);
 }
 
 .pf-preset-swatch span { display: block; flex: 1; }
-.pf-preset-label { font-size: 9px; font-weight: 600; color: #6B5F58; }
+.pf-preset-label { font-size: 11px; font-weight: 600; color: #6B5F58; }
 
 /* Color rows */
 .pf-color-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 6px 10px;
+	padding: 11px 16px;
 	border-bottom: 1px solid #F0EAE2;
 }
 
 .pf-color-row:last-child { border-bottom: none; }
 
 .pf-color-row-label {
-	font-size: 12px;
+	font-size: 13px;
+	font-weight: 500;
 	color: #2B2420;
 }
 
 .pf-color-wrap {
 	display: flex;
 	align-items: center;
-	gap: 5px;
+	gap: 8px;
 }
 
 .pf-color-input {
-	width: 26px;
-	height: 26px;
+	width: 32px;
+	height: 32px;
 	border: 1px solid #DDD4C8;
-	border-radius: 4px;
+	border-radius: 6px;
 	padding: 2px;
 	cursor: pointer;
 	flex-shrink: 0;
@@ -1266,12 +1268,12 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 }
 
 .pf-color-text {
-	width: 62px;
-	font-size: 11px;
+	width: 80px;
+	font-size: 12px;
 	font-family: monospace;
-	padding: 3px 5px;
+	padding: 6px 8px;
 	border: 1px solid #DDD4C8;
-	border-radius: 4px;
+	border-radius: 5px;
 	color: #2B2420;
 }
 
@@ -1293,10 +1295,16 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 7px 10px;
+	padding: 12px 16px;
 	border-bottom: 1px solid #F0EAE2;
-	font-size: 12px;
+	font-size: 13px;
 	color: #2B2420;
+	gap: 12px;
+}
+
+.pf-theme-option-row > span:first-child {
+	font-weight: 500;
+	flex-shrink: 0;
 }
 
 .pf-theme-option-row:last-child { border-bottom: none; }
@@ -1304,50 +1312,50 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 .pf-range-wrap {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 10px;
 }
 
 .pf-range-input {
-	width: 80px;
+	width: 120px;
 	accent-color: #B5654A;
 	cursor: pointer;
 }
 
 .pf-range-val {
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: 700;
 	color: #B5654A;
-	min-width: 26px;
+	min-width: 32px;
 	text-align: right;
 }
 
 /* Toggle grupe (Normal / CAPS / Light itd.) */
 .pf-toggle-group {
 	display: flex;
-	gap: 2px;
+	gap: 3px;
 	background: #EDE8E1;
-	border-radius: 5px;
-	padding: 2px;
+	border-radius: 7px;
+	padding: 3px;
 }
 
 .pf-toggle-opt {
-	padding: 3px 8px;
-	font-size: 11px;
+	padding: 6px 14px;
+	font-size: 12px;
 	font-weight: 600;
 	border: none;
-	border-radius: 4px;
+	border-radius: 5px;
 	background: none;
 	cursor: pointer;
 	color: #9C9182;
-	transition: background 0.1s, color 0.1s;
+	transition: background 0.12s, color 0.12s;
 	white-space: nowrap;
 	line-height: 1.4;
 }
 
 .pf-toggle-opt.is-active {
 	background: #fff;
-	color: #2B2420;
-	box-shadow: 0 1px 2px rgba(43,36,32,0.10);
+	color: #B5654A;
+	box-shadow: 0 1px 3px rgba(43,36,32,0.12);
 }
 
 /* Preview kolona */

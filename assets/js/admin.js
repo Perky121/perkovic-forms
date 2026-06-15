@@ -1131,13 +1131,13 @@ jQuery(function ($) {
 	$('#pf-load-template-btn').on('click', function () {
 		loadTemplates(function () {
 			renderTemplateModal();
-			$('#pf-template-modal').addClass('is-open');
+			$('#pf-template-modal').addClass('is-open').css('display', 'flex');
 		});
 	});
 
-	$('#pf-template-modal-close, #pf-template-modal').on('click', function (e) {
+	$(document).on('click', '#pf-template-modal-close, #pf-template-modal', function (e) {
 		if (e.target === this || $(e.target).is('#pf-template-modal-close')) {
-			$('#pf-template-modal').removeClass('is-open');
+			$('#pf-template-modal').removeClass('is-open').css('display', 'none');
 		}
 	});
 
@@ -1223,13 +1223,12 @@ jQuery(function ($) {
 	});
 
 	$('#pf-preview-btn').on('click', function () {
-		// Premjesti modal na body kako bi izbjegao WP admin overflow:hidden problem
 		var $modal = $('#pf-preview-modal');
 		if ( $modal.parent()[0] !== document.body ) {
 			$modal.appendTo('body');
 		}
 		$('#pf-preview-frame').html(buildPreviewHTML());
-		$modal.addClass('is-open');
+		$modal.addClass('is-open').css('display', 'flex');
 		evaluatePreviewConditions($('#pf-preview-frame')[0]);
 	});
 
@@ -1289,12 +1288,12 @@ jQuery(function ($) {
 	}
 
 	$('#pf-preview-close').on('click', function () {
-		$('#pf-preview-modal').removeClass('is-open');
+		$('#pf-preview-modal').removeClass('is-open').css('display', 'none');
 	});
 
-	$('#pf-preview-modal').on('click', function (e) {
+	$(document).on('click', '#pf-preview-modal', function (e) {
 		if (e.target === this) {
-			$(this).removeClass('is-open');
+			$(this).removeClass('is-open').css('display', 'none');
 		}
 	});
 
