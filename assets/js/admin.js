@@ -1718,8 +1718,9 @@ jQuery(function ($) {
 			}
 			if (i < totalSteps - 1) {
 				html += '<button type="button" class="pf-btn pf-btn-primary pf-preview-next" data-step="' + (i + 1) + '">Sljedeći korak →</button>';
+				html += '<button type="button" class="pf-btn pf-btn-primary pf-preview-submit" data-step="' + (i + 1) + '" disabled style="display:none;">' + escapeHtml(submitLabel) + '</button>';
 			} else {
-				html += '<button type="button" class="pf-btn pf-btn-primary" disabled>' + escapeHtml(submitLabel) + '</button>';
+				html += '<button type="button" class="pf-btn pf-btn-primary pf-preview-submit" disabled>' + escapeHtml(submitLabel) + '</button>';
 			}
 			html += '</div>';
 
@@ -1732,28 +1733,35 @@ jQuery(function ($) {
 
 	// Preview navigacija (delegirana)
 	$(document).on('click', '.pf-preview-next', function () {
-		var step = parseInt($(this).data('step'), 10);
-		var $frame = $('#pf-preview-frame');
-		$frame.find('.pf-step-panel.is-active').removeClass('is-active');
-		$frame.find('.pf-step-panel[data-step="' + (step + 1) + '"]').addClass('is-active');
-		$frame.find('.pf-step-dot').removeClass('is-active is-complete').each(function () {
-			var s = parseInt($(this).data('step'), 10);
-			if (s < step + 1) $(this).addClass('is-complete');
-			else if (s === step + 1) $(this).addClass('is-active');
-		});
+		var frame = $('#pf-preview-frame')[0];
+		var panels = Array.prototype.slice.call(frame.querySelectorAll('.pf-step-panel'));
+		var curIdx = panels.findIndex(function (p) { return p.classList.contains('is-active'); });
+		if (curIdx === -1) return;
+		var nextIdx = findPreviewVisibleStep(frame, panels, curIdx, +1);
+		if (nextIdx === -1) return;
+		gotoPreviewStep(frame, panels, nextIdx);
 	});
 
 	$(document).on('click', '.pf-preview-prev', function () {
-		var step = parseInt($(this).data('step'), 10);
-		var $frame = $('#pf-preview-frame');
-		$frame.find('.pf-step-panel.is-active').removeClass('is-active');
-		$frame.find('.pf-step-panel[data-step="' + (step - 1) + '"]').addClass('is-active');
-		$frame.find('.pf-step-dot').removeClass('is-active is-complete').each(function () {
-			var s = parseInt($(this).data('step'), 10);
-			if (s < step - 1) $(this).addClass('is-complete');
-			else if (s === step - 1) $(this).addClass('is-active');
-		});
+		var frame = $('#pf-preview-frame')[0];
+		var panels = Array.prototype.slice.call(frame.querySelectorAll('.pf-step-panel'));
+		var curIdx = panels.findIndex(function (p) { return p.classList.contains('is-active'); });
+		if (curIdx === -1) return;
+		var prevIdx = findPreviewVisibleStep(frame, panels, curIdx, -1);
+		if (prevIdx === -1) return;
+		gotoPreviewStep(frame, panels, prevIdx);
 	});
+
+	function gotoPreviewStep(frame, panels, targetIdx) {
+		panels.forEach(function (p, i) { p.classList.toggle('is-active', i === targetIdx); });
+		var targetStep = parseInt(panels[targetIdx].getAttribute('data-step'), 10);
+		frame.querySelectorAll('.pf-step-dot').forEach(function (dot) {
+			var s = parseInt(dot.getAttribute('data-step'), 10);
+			dot.classList.remove('is-active', 'is-complete');
+			if (s < targetStep) dot.classList.add('is-complete');
+			else if (s === targetStep) dot.classList.add('is-active');
+		});
+	}
 
 	$('#pf-preview-btn').on('click', function () {
 		var $modal = $('#pf-preview-modal');
@@ -1762,13 +1770,27 @@ jQuery(function ($) {
 		}
 		$('#pf-preview-frame').html(buildPreviewHTML());
 		$modal.css('display', '').addClass('is-open');
-		evaluatePreviewConditions($('#pf-preview-frame')[0]);
+		var frame = $('#pf-preview-frame')[0];
+		evaluatePreviewConditions(frame);
+		syncPreviewChecked(frame);
+		updatePreviewStepButtons(frame);
 	});
 
-	// Re-evaluiraj pri svakoj promjeni unutar previewa
+	// Re-evaluiraj pri svakoj promjeni unutar previewa + is-checked klasa
 	$(document).on('change input', '#pf-preview-frame', function () {
-		evaluatePreviewConditions($('#pf-preview-frame')[0]);
+		var frame = $('#pf-preview-frame')[0];
+		evaluatePreviewConditions(frame);
+		syncPreviewChecked(frame);
+		updatePreviewStepButtons(frame);
 	});
+
+	function syncPreviewChecked(frame) {
+		if (!frame) return;
+		frame.querySelectorAll('.pf-inline-option').forEach(function (label) {
+			var inp = label.querySelector('input[type="checkbox"], input[type="radio"]');
+			if (inp) label.classList.toggle('is-checked', inp.checked);
+		});
+	}
 
 	function getPreviewFieldValue(frame, name) {
 		// Traži po name i name[] (checkbox)
@@ -1791,32 +1813,82 @@ jQuery(function ($) {
 		return byName[0].value;
 	}
 
+	function previewSingleCondMet(target, op, value) {
+		var isArr = Array.isArray(target);
+		switch (op) {
+			case 'is_empty':     return isArr ? target.length === 0 : (target || '') === '';
+			case 'is_not_empty': return isArr ? target.length > 0   : (target || '') !== '';
+			case 'not_equals':   return isArr ? target.indexOf(value) === -1 : target !== value;
+			case 'contains':     return isArr ? target.some(function(t){return t.toLowerCase().indexOf(value.toLowerCase())!==-1;}) : (target||'').toLowerCase().indexOf(value.toLowerCase())!==-1;
+			case 'not_contains': return isArr ? !target.some(function(t){return t.toLowerCase().indexOf(value.toLowerCase())!==-1;}) : (target||'').toLowerCase().indexOf(value.toLowerCase())===-1;
+			case 'starts_with':  return isArr ? target.some(function(t){return t.toLowerCase().indexOf(value.toLowerCase())===0;}) : (target||'').toLowerCase().indexOf(value.toLowerCase())===0;
+			case 'greater_than': return parseFloat(isArr ? target[0] : target) > parseFloat(value);
+			case 'less_than':    return parseFloat(isArr ? target[0] : target) < parseFloat(value);
+			default:             return isArr ? target.indexOf(value) !== -1 : target === value;
+		}
+	}
+
+	function previewEvalCond(frame, cond) {
+		if (!cond) return true;
+		if (!cond.rules) {
+			return previewSingleCondMet(getPreviewFieldValue(frame, cond.field), cond.operator || 'equals', cond.value || '');
+		}
+		var results = cond.rules.map(function (r) {
+			return previewSingleCondMet(getPreviewFieldValue(frame, r.field), r.operator || 'equals', r.value || '');
+		});
+		return cond.match === 'any' ? results.some(Boolean) : results.every(Boolean);
+	}
+
 	function evaluatePreviewConditions(frame) {
 		if (!frame) return;
-		frame.querySelectorAll('[data-cond-field]').forEach(function (el) {
-			var condField = el.getAttribute('data-cond-field');
-			var condOp    = el.getAttribute('data-cond-op')    || 'equals';
-			var condValue = el.getAttribute('data-cond-value') || '';
-			var target    = getPreviewFieldValue(frame, condField);
-			var show      = false;
+		// Polja s uvjetom (novi data-pf-cond JSON)
+		frame.querySelectorAll('[data-pf-cond]').forEach(function (el) {
+			var cond = null;
+			try { cond = JSON.parse(el.getAttribute('data-pf-cond')); } catch(e) {}
+			el.style.display = previewEvalCond(frame, cond) ? '' : 'none';
+		});
+	}
 
-			if (Array.isArray(target)) {
-				switch (condOp) {
-					case 'not_equals': show = target.indexOf(condValue) === -1; break;
-					case 'contains':   show = target.some(function (t) { return t.toLowerCase().indexOf(condValue.toLowerCase()) !== -1; }); break;
-					default:           show = target.indexOf(condValue) !== -1; break; // equals
-				}
-			} else {
-				var targetStr = (target || '').toLowerCase();
-				var valueStr  = (condValue || '').toLowerCase();
-				switch (condOp) {
-					case 'not_equals': show = targetStr !== valueStr; break;
-					case 'contains':   show = targetStr.indexOf(valueStr) !== -1; break;
-					default:           show = targetStr === valueStr; break; // equals
-				}
+	// Je li stranica vidljiva u previewu?
+	function isPreviewStepVisible(frame, panel) {
+		var f = panel.getAttribute('data-step-cond-field');
+		if (!f) return true;
+		return previewSingleCondMet(
+			getPreviewFieldValue(frame, f),
+			panel.getAttribute('data-step-cond-op') || 'equals',
+			panel.getAttribute('data-step-cond-value') || ''
+		);
+	}
+
+	function findPreviewVisibleStep(frame, panels, fromIdx, dir) {
+		var i = fromIdx + dir;
+		while (i >= 0 && i < panels.length) {
+			if (isPreviewStepVisible(frame, panels[i])) return i;
+			i += dir;
+		}
+		return -1;
+	}
+
+	function updatePreviewStepButtons(frame) {
+		if (!frame) return;
+		var panels = Array.prototype.slice.call(frame.querySelectorAll('.pf-step-panel'));
+		panels.forEach(function (panel, idx) {
+			var nextBtn = panel.querySelector('.pf-preview-next');
+			var submitBtn = panel.querySelector('.pf-preview-submit');
+			if (!nextBtn || !submitBtn) return;
+			var hasNext = findPreviewVisibleStep(frame, panels, idx, +1) !== -1;
+			nextBtn.style.display   = hasNext ? '' : 'none';
+			submitBtn.style.display = hasNext ? 'none' : '';
+		});
+		// Step indicator — sakrij nevidljive
+		var dots = frame.querySelectorAll('.pf-step-dot');
+		panels.forEach(function (panel, idx) {
+			var vis = isPreviewStepVisible(frame, panel);
+			if (dots[idx]) {
+				dots[idx].style.display = vis ? '' : 'none';
+				var line = dots[idx].nextElementSibling;
+				if (line && line.classList.contains('pf-step-line')) line.style.display = vis ? '' : 'none';
 			}
-
-			el.style.display = show ? '' : 'none';
 		});
 	}
 

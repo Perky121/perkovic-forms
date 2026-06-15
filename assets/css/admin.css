@@ -1681,11 +1681,44 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 .pf-preview-frame .pf-inline-option {
 	display: flex !important;
 	align-items: center !important;
+	gap: 10px !important;
 	padding: 10px 14px !important;
 	margin-bottom: 8px !important;
 	border-radius: 6px !important;
+	border: 1.5px solid #DDD4C8 !important;
+	background: #fff !important;
 	cursor: pointer !important;
 	list-style: none !important;
+}
+
+/* Native checkbox/radio u preview — vrati WP admin izgled na normalu */
+.pf-preview-frame .pf-inline-option input[type="checkbox"],
+.pf-preview-frame .pf-inline-option input[type="radio"] {
+	-webkit-appearance: auto !important;
+	-moz-appearance: auto !important;
+	appearance: auto !important;
+	width: 18px !important;
+	height: 18px !important;
+	min-width: 18px !important;
+	min-height: 18px !important;
+	max-width: 18px !important;
+	max-height: 18px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	opacity: 1 !important;
+	position: static !important;
+	pointer-events: auto !important;
+	accent-color: #B5654A !important;
+	cursor: pointer !important;
+	flex-shrink: 0 !important;
+	border: 1px solid #8c8f94 !important;
+	box-shadow: none !important;
+	clip: auto !important;
+}
+
+.pf-preview-frame .pf-inline-option input[type="checkbox"]:checked,
+.pf-preview-frame .pf-inline-option input[type="radio"]:checked {
+	background: #B5654A !important;
 }
 
 /* Fields */
