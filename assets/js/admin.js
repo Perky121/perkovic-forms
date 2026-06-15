@@ -1777,12 +1777,54 @@ jQuery(function ($) {
 	});
 
 	// Re-evaluiraj pri svakoj promjeni unutar previewa + is-checked klasa
-	$(document).on('change input', '#pf-preview-frame', function () {
+	$(document).on('change', '#pf-preview-frame', function () {
 		var frame = $('#pf-preview-frame')[0];
 		evaluatePreviewConditions(frame);
 		syncPreviewChecked(frame);
 		updatePreviewStepButtons(frame);
+		checkPreviewAutoAdvance(frame);
 	});
+	$(document).on('input', '#pf-preview-frame', function () {
+		var frame = $('#pf-preview-frame')[0];
+		evaluatePreviewConditions(frame);
+		updatePreviewStepButtons(frame);
+	});
+
+	function checkPreviewAutoAdvance(frame) {
+		if (!frame) return;
+		var panels = Array.prototype.slice.call(frame.querySelectorAll('.pf-step-panel'));
+		var curIdx = panels.findIndex(function (p) { return p.classList.contains('is-active'); });
+		if (curIdx === -1) return;
+
+		var nextIdx = findPreviewVisibleStep(frame, panels, curIdx, +1);
+		if (nextIdx === -1) return;
+
+		// Samo ako sljedeća stranica ima uvjet
+		if (!panels[nextIdx].getAttribute('data-step-cond-field')) return;
+
+		// Provjeri jesu li sva vidljiva polja trenutne stranice ispunjena
+		var inputs = Array.prototype.slice.call(
+			panels[curIdx].querySelectorAll('input:not([type="hidden"]), select, textarea')
+		).filter(function (inp) {
+			var f = inp.closest('.pf-field');
+			return f && f.style.display !== 'none';
+		});
+		if (!inputs.length) return;
+
+		var allFilled = inputs.every(function (inp) {
+			if (inp.type === 'checkbox' || inp.type === 'radio') {
+				var group = panels[curIdx].querySelectorAll('[name="' + inp.name + '"]');
+				return Array.prototype.some.call(group, function (g) { return g.checked; });
+			}
+			return inp.value && inp.value.trim() !== '';
+		});
+
+		if (allFilled) {
+			setTimeout(function () {
+				gotoPreviewStep(frame, panels, nextIdx);
+			}, 350);
+		}
+	}
 
 	function syncPreviewChecked(frame) {
 		if (!frame) return;
@@ -1831,8 +1873,10 @@ jQuery(function ($) {
 	function previewEvalCond(frame, cond) {
 		if (!cond) return true;
 		if (!cond.rules) {
+			if (!cond.field) return true;
 			return previewSingleCondMet(getPreviewFieldValue(frame, cond.field), cond.operator || 'equals', cond.value || '');
 		}
+		if (!cond.rules.length) return true;
 		var results = cond.rules.map(function (r) {
 			return previewSingleCondMet(getPreviewFieldValue(frame, r.field), r.operator || 'equals', r.value || '');
 		});
