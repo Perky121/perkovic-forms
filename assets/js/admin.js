@@ -1403,6 +1403,33 @@ jQuery(function ($) {
 		renderThemePreview();
 	});
 
+	// Label style toggle
+	$(document).on('click', '.pf-label-style-opt', function () {
+		$('.pf-label-style-opt').removeClass('is-active');
+		$(this).addClass('is-active');
+		pfTheme.label_style = $(this).data('val');
+		syncThemeToInput();
+		renderThemePreview();
+	});
+
+	// Font size toggle
+	$(document).on('click', '.pf-size-opt', function () {
+		$('.pf-size-opt').removeClass('is-active');
+		$(this).addClass('is-active');
+		pfTheme.font_size = $(this).data('val');
+		syncThemeToInput();
+		renderThemePreview();
+	});
+
+	// Input height toggle
+	$(document).on('click', '.pf-height-opt', function () {
+		$('.pf-height-opt').removeClass('is-active');
+		$(this).addClass('is-active');
+		pfTheme.input_height = $(this).data('val');
+		syncThemeToInput();
+		renderThemePreview();
+	});
+
 	// Preset cards
 	$(document).on('click', '.pf-preset-card', function () {
 		var key = $(this).data('preset');
@@ -1424,6 +1451,12 @@ jQuery(function ($) {
 		$('#pf-radius-label').text((pfTheme.border_radius || '8') + 'px');
 		$('.pf-btn-style-opt').removeClass('is-active');
 		$('.pf-btn-style-opt[data-val="' + (pfTheme.button_style || 'filled') + '"]').addClass('is-active');
+		$('.pf-label-style-opt').removeClass('is-active');
+		$('.pf-label-style-opt[data-val="' + (pfTheme.label_style || 'normal') + '"]').addClass('is-active');
+		$('.pf-size-opt').removeClass('is-active');
+		$('.pf-size-opt[data-val="' + (pfTheme.font_size || 'medium') + '"]').addClass('is-active');
+		$('.pf-height-opt').removeClass('is-active');
+		$('.pf-height-opt[data-val="' + (pfTheme.input_height || 'normal') + '"]').addClass('is-active');
 
 		$('.pf-preset-card').removeClass('is-active');
 		$(this).addClass('is-active');

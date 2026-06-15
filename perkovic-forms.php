@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.6.1
+ * Version: 1.6.2
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.6.1' );
+define( 'PF_VERSION', '1.6.2' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -112,7 +112,7 @@ class PF_Auto_Updater {
 		// Izvuci verziju iz taga (ukloni 'v' prefix ako postoji)
 		$remote_version = ltrim( $body['tag_name'], 'v' );
 
-		// Pronađi ZIP asset
+		// Pronađi ZIP asset — SAMO naš priloženi ZIP, ne GitHub automatski zipball
 		$zip_url = '';
 		if ( ! empty( $body['assets'] ) ) {
 			foreach ( $body['assets'] as $asset ) {
@@ -120,11 +120,20 @@ class PF_Auto_Updater {
 					$zip_url = $asset['browser_download_url'];
 					break;
 				}
+				// Prihvati i octet-stream ako je .zip datoteka
+				if ( isset( $asset['name'] ) && str_ends_with( $asset['name'], '.zip' ) ) {
+					$zip_url = $asset['browser_download_url'];
+					break;
+				}
 			}
 		}
-		// Fallback: zipball direktno
+
+		// NEMA fallback na zipball_url — GitHub zipball koristi krivi naziv foldera
+		// što uzrokuje deaktivaciju plugina nakon ažuriranja.
+		// Ako nema priloženog ZIP-a, update nije dostupan.
 		if ( empty( $zip_url ) ) {
-			$zip_url = $body['zipball_url'] ?? '';
+			set_transient( $this->cache_key, null, HOUR_IN_SECONDS );
+			return null;
 		}
 
 		$info = array(
@@ -898,6 +907,15 @@ function pf_sanitize_theme( $raw ) {
 	if ( isset( $raw['button_style'] ) && in_array( $raw['button_style'], $allowed_btn, true ) ) {
 		$out['button_style'] = $raw['button_style'];
 	}
+	if ( isset( $raw['label_style'] ) && in_array( $raw['label_style'], array( 'normal', 'uppercase', 'light' ), true ) ) {
+		$out['label_style'] = $raw['label_style'];
+	}
+	if ( isset( $raw['font_size'] ) && in_array( $raw['font_size'], array( 'small', 'medium', 'large' ), true ) ) {
+		$out['font_size'] = $raw['font_size'];
+	}
+	if ( isset( $raw['input_height'] ) && in_array( $raw['input_height'], array( 'compact', 'normal', 'spacious' ), true ) ) {
+		$out['input_height'] = $raw['input_height'];
+	}
 	return $out;
 }
 
@@ -923,8 +941,31 @@ function pf_theme_css( $form_id, $theme ) {
 		}
 	}
 
-	$wrap_sel  = '#pf-wrap-' . intval( $form_id );
-	$id_sel    = '#pf-form-' . intval( $form_id );
+	// Typography opcije
+	$label_style  = isset( $t['label_style'] )  ? $t['label_style']  : 'normal';
+	$font_size    = isset( $t['font_size'] )    ? $t['font_size']    : 'medium';
+	$input_height = isset( $t['input_height'] ) ? $t['input_height'] : 'normal';
+
+	// Label CSS prema stilu
+	$label_css = match ( $label_style ) {
+		'uppercase' => "font-weight:700 !important;font-size:10px !important;text-transform:uppercase !important;letter-spacing:0.08em !important;",
+		'light'     => "font-weight:400 !important;font-size:13px !important;text-transform:none !important;letter-spacing:0 !important;",
+		default     => "font-weight:600 !important;font-size:14px !important;text-transform:none !important;letter-spacing:0 !important;",
+	};
+
+	// Input font-size
+	$input_font_size = match ( $font_size ) {
+		'small'  => '13px',
+		'large'  => '17px',
+		default  => '15px',
+	};
+
+	// Input padding (visina)
+	$input_padding = match ( $input_height ) {
+		'compact'  => '9px 12px',
+		'spacious' => '16px 16px',
+		default    => '12px 14px',
+	};
 	$both_sel  = $wrap_sel . ', ' . $id_sel;
 
 	// Scope na ID forme + wrapper (specifičan selector koji bije Elementor)
@@ -1041,9 +1082,8 @@ function pf_theme_css( $form_id, $theme ) {
 		. "\tborder-radius: {$radius} !important;\n"
 		. "\tbackground: {$t['input_bg']} !important;\n"
 		. "\tcolor: {$t['text_color']} !important;\n"
-		. "\tpadding: 11px 14px !important;\n"
-		. "\tfont-family: 'Montserrat', sans-serif !important;\n"
-		. "\tfont-size: 14px !important;\n"
+		. "\tpadding: {$input_padding} !important;\n"
+		. "\tfont-size: {$input_font_size} !important;\n"
 		. "\tfont-weight: 500 !important;\n"
 		. "\twidth: 100% !important;\n"
 		. "\tbox-sizing: border-box !important;\n"
@@ -1066,11 +1106,7 @@ function pf_theme_css( $form_id, $theme ) {
 		. "{$id_sel} .pf-field label,\n"
 		. "{$id_sel} .pf-field legend {\n"
 		. "\tcolor: {$t['label_color']} !important;\n"
-		. "\tfont-family: 'Montserrat', sans-serif !important;\n"
-		. "\tfont-weight: 700 !important;\n"
-		. "\tfont-size: 10px !important;\n"
-		. "\ttext-transform: uppercase !important;\n"
-		. "\tletter-spacing: 0.08em !important;\n"
+		. "\t{$label_css}\n"
 		. "\tdisplay: block !important;\n"
 		. "\tmargin-bottom: 6px !important;\n"
 		. "}\n"
@@ -1150,11 +1186,14 @@ function pf_render_form_edit_page() {
 	$submit_label    = isset( $settings['submit_label'] )    ? $settings['submit_label']    : 'Pošalji upit';
 
 	$theme_defaults = array(
-		'primary_color' => '#B5654A', 'bg_color'   => '#FFFFFF',
-		'text_color'    => '#2B2420', 'label_color' => '#2B2420',
+		'primary_color' => '#B5654A', 'bg_color'      => '#FFFFFF',
+		'text_color'    => '#2B2420', 'label_color'   => '#2B2420',
 		'border_color'  => '#DDD4C8', 'border_radius' => '8',
-		'font_family'   => 'inherit', 'button_style'  => 'filled',
+		'font_family'   => "'Montserrat', sans-serif", 'button_style' => 'filled',
 		'button_text'   => '#FFFFFF', 'input_bg'      => '#FBF8F4',
+		'label_style'   => 'normal',  // normal | uppercase | light
+		'font_size'     => 'medium',  // small | medium | large
+		'input_height'  => 'normal',  // compact | normal | spacious
 	);
 	$theme = array_merge( $theme_defaults, isset( $settings['theme'] ) && is_array( $settings['theme'] ) ? $settings['theme'] : array() );
 	$ai_configured = (bool) get_option( 'pf_openai_api_key', '' );
@@ -1365,17 +1404,77 @@ function pf_render_form_edit_page() {
 									<label class="pf-theme-row-label">Font</label>
 									<select class="pf-select-input" data-prop="font_family">
 										<?php foreach ( array(
-											'inherit'                   => 'Tema stranice',
-											"'Inter', sans-serif"       => 'Inter',
-											"'Roboto', sans-serif"      => 'Roboto',
-											"'Lato', sans-serif"        => 'Lato',
-											"'Playfair Display', serif" => 'Playfair Display',
-											"'Montserrat', sans-serif"  => 'Montserrat',
-											"'Open Sans', sans-serif"   => 'Open Sans',
+											'inherit'                        => 'Tema stranice (default)',
+											"'Inter', sans-serif"            => 'Inter — Moderno, čisto',
+											"'Montserrat', sans-serif"       => 'Montserrat — Snažno, pouzdano',
+											"'Lato', sans-serif"             => 'Lato — Toplo, prijazno',
+											"'Nunito', sans-serif"           => 'Nunito — Zaobljeno, mekano',
+											"'Raleway', sans-serif"          => 'Raleway — Elegantno, lagano',
+											"'Roboto', sans-serif"           => 'Roboto — Neutralno, tehničko',
+											"'Open Sans', sans-serif"        => 'Open Sans — Čitljivo, pouzdano',
+											"'Playfair Display', serif"      => 'Playfair Display — Premium, serif',
+											"'DM Sans', sans-serif"          => 'DM Sans — Minimalistično',
 										) as $val => $lbl ) : ?>
 											<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $theme['font_family'], $val ); ?>><?php echo esc_html( $lbl ); ?></option>
 										<?php endforeach; ?>
 									</select>
+								</div>
+							</div>
+
+							<div class="pf-theme-section">
+								<div class="pf-theme-section-title">Labelice iznad polja</div>
+								<div class="pf-theme-row">
+									<label class="pf-theme-row-label">Stil teksta</label>
+									<div class="pf-label-style-toggle">
+										<?php foreach ( array(
+											'normal'    => 'Normal',
+											'uppercase' => 'UPPERCASE',
+											'light'     => 'Light',
+										) as $val => $lbl ) : ?>
+											<button type="button"
+											        class="pf-label-style-opt <?php echo ( isset( $theme['label_style'] ) ? $theme['label_style'] : 'normal' ) === $val ? 'is-active' : ''; ?>"
+											        data-val="<?php echo esc_attr( $val ); ?>"
+											        style="font-weight: <?php echo $val === 'light' ? '400' : ( $val === 'uppercase' ? '700' : '600' ); ?>; text-transform: <?php echo $val === 'uppercase' ? 'uppercase' : 'none'; ?>; font-size: <?php echo $val === 'uppercase' ? '10px' : '13px'; ?>">
+												<?php echo esc_html( $lbl ); ?>
+											</button>
+										<?php endforeach; ?>
+									</div>
+								</div>
+								<div class="pf-theme-row">
+									<label class="pf-theme-row-label">Veličina teksta</label>
+									<div class="pf-font-size-toggle">
+										<?php foreach ( array(
+											'small'  => 'S',
+											'medium' => 'M',
+											'large'  => 'L',
+										) as $val => $lbl ) : ?>
+											<button type="button"
+											        class="pf-size-opt <?php echo ( isset( $theme['font_size'] ) ? $theme['font_size'] : 'medium' ) === $val ? 'is-active' : ''; ?>"
+											        data-val="<?php echo esc_attr( $val ); ?>">
+												<?php echo esc_html( $lbl ); ?>
+											</button>
+										<?php endforeach; ?>
+									</div>
+								</div>
+							</div>
+
+							<div class="pf-theme-section">
+								<div class="pf-theme-section-title">Inputi</div>
+								<div class="pf-theme-row">
+									<label class="pf-theme-row-label">Visina polja</label>
+									<div class="pf-input-height-toggle">
+										<?php foreach ( array(
+											'compact'  => 'Kompaktno',
+											'normal'   => 'Normalno',
+											'spacious' => 'Prostrano',
+										) as $val => $lbl ) : ?>
+											<button type="button"
+											        class="pf-height-opt <?php echo ( isset( $theme['input_height'] ) ? $theme['input_height'] : 'normal' ) === $val ? 'is-active' : ''; ?>"
+											        data-val="<?php echo esc_attr( $val ); ?>">
+												<?php echo esc_html( $lbl ); ?>
+											</button>
+										<?php endforeach; ?>
+									</div>
 								</div>
 							</div>
 
