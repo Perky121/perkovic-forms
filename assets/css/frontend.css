@@ -1,10 +1,494 @@
 /* ===========================================================
    Perković Forms - Frontend CSS
-   Scoped na .pf-form za izolaciju od teme/Elementora
+   Font: Montserrat | Stil: Kompaktno, profesionalno
    =========================================================== */
 
-/* Card wrapper - daje bijelu karticu s padding i shadow */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+/* Card wrapper */
 .pf-form-wrap {
+	background: #FFFFFF;
+	border-radius: 10px;
+	padding: 28px 32px;
+	max-width: 680px;
+	margin: 0 auto;
+	box-shadow: 0 2px 16px rgba(43, 36, 32, 0.08);
+	font-family: 'Montserrat', sans-serif;
+}
+
+@media (max-width: 640px) {
+	.pf-form-wrap { padding: 20px; }
+}
+
+.pf-form,
+.pf-form * {
+	box-sizing: border-box;
+}
+
+.pf-form {
+	max-width: 100%;
+	margin: 0;
+	font-family: 'Montserrat', var(--pf-font, sans-serif);
+	color: var(--pf-text, #1A1614);
+	padding: 0;
+}
+
+/* ---- Step indicator ---- */
+.pf-form .pf-steps-indicator {
+	display: flex;
+	align-items: center;
+	margin-bottom: 24px;
+	padding: 0;
+	background: none;
+	border: none;
+	list-style: none;
+}
+
+.pf-form .pf-step-dot {
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background: #E8E2DC;
+	color: #9C9182;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 700;
+	font-size: 12px;
+	flex-shrink: 0;
+	line-height: 1;
+	letter-spacing: 0;
+	transition: background-color 0.2s ease, color 0.2s ease;
+	border: none;
+	padding: 0;
+	font-family: 'Montserrat', sans-serif;
+}
+
+.pf-form .pf-step-dot.is-active,
+.pf-form .pf-step-dot.is-complete {
+	background: var(--pf-primary, #B5654A);
+	color: #fff;
+}
+
+.pf-form .pf-step-line {
+	flex: 1;
+	height: 1px;
+	background: #E8E2DC;
+	margin: 0 6px;
+	border: none;
+	transition: background-color 0.2s ease;
+}
+
+.pf-form .pf-step-line.is-complete {
+	background: var(--pf-primary, #B5654A);
+}
+
+/* ---- Step panels ---- */
+.pf-form .pf-step-panel {
+	display: none !important;
+}
+
+.pf-form .pf-step-panel.is-active {
+	display: block !important;
+	animation: pf-fade-in 0.18s ease;
+}
+
+@keyframes pf-fade-in {
+	from { opacity: 0; transform: translateY(4px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Grid ---- */
+.pf-form .pf-row {
+	display: grid;
+	gap: 0 16px;
+	grid-template-columns: 1fr;
+}
+
+.pf-form .pf-row.pf-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.pf-form .pf-row.pf-cols-3 { grid-template-columns: repeat(3, 1fr); }
+
+@media (max-width: 560px) {
+	.pf-form .pf-row.pf-cols-2,
+	.pf-form .pf-row.pf-cols-3 { grid-template-columns: 1fr; }
+}
+
+.pf-form .pf-col { min-width: 0; }
+
+/* ---- Fields ---- */
+.pf-form .pf-field {
+	margin-bottom: 16px;
+	padding: 0;
+	border: none;
+	background: none;
+}
+
+.pf-form .pf-field:last-child { margin-bottom: 0; }
+
+/* UPPERCASE labelice — moderno i profesionalno */
+.pf-form .pf-field label,
+.pf-form .pf-field legend {
+	display: block;
+	font-family: 'Montserrat', sans-serif;
+	font-weight: 700;
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	margin-bottom: 6px;
+	padding: 0;
+	color: var(--pf-label, #6B5F58);
+	background: none;
+	border: none;
+	line-height: 1.4;
+	width: 100%;
+}
+
+.pf-form .pf-required-mark {
+	color: var(--pf-primary, #B5654A);
+	font-size: 10px;
+}
+
+/* ---- Text inputs ---- */
+.pf-form .pf-field input[type="text"],
+.pf-form .pf-field input[type="email"],
+.pf-form .pf-field input[type="tel"],
+.pf-form .pf-field input[type="number"],
+.pf-form .pf-field textarea {
+	display: block;
+	width: 100%;
+	padding: 11px 14px;
+	font-family: 'Montserrat', sans-serif;
+	font-size: 14px;
+	font-weight: 500;
+	border: 1.5px solid var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 6px);
+	background: var(--pf-input-bg, #FAF8F6);
+	color: var(--pf-text, #1A1614);
+	line-height: 1.5;
+	outline: none;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+	-webkit-appearance: none;
+	appearance: none;
+	margin: 0;
+}
+
+.pf-form .pf-field input[type="text"]::placeholder,
+.pf-form .pf-field input[type="email"]::placeholder,
+.pf-form .pf-field input[type="tel"]::placeholder,
+.pf-form .pf-field input[type="number"]::placeholder,
+.pf-form .pf-field textarea::placeholder {
+	color: #BDB5AF;
+	font-weight: 400;
+}
+
+.pf-form .pf-field input[type="text"]:focus,
+.pf-form .pf-field input[type="email"]:focus,
+.pf-form .pf-field input[type="tel"]:focus,
+.pf-form .pf-field input[type="number"]:focus,
+.pf-form .pf-field textarea:focus {
+	border-color: var(--pf-primary, #B5654A);
+	background: #fff;
+	box-shadow: 0 0 0 3px rgba(181, 101, 74, 0.10);
+}
+
+.pf-form .pf-field textarea {
+	min-height: 100px;
+	resize: vertical;
+}
+
+/* ---- Select ---- */
+.pf-form .pf-field select {
+	display: block;
+	width: 100%;
+	padding: 11px 36px 11px 14px;
+	font-family: 'Montserrat', sans-serif;
+	font-size: 14px;
+	font-weight: 500;
+	border: 1.5px solid var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 6px);
+	background-color: var(--pf-input-bg, #FAF8F6);
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%23B5654A' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 13px center;
+	background-size: 11px 7px;
+	color: var(--pf-text, #1A1614);
+	-webkit-appearance: none;
+	appearance: none;
+	cursor: pointer;
+	line-height: 1.5;
+	outline: none;
+	margin: 0;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pf-form .pf-field select:focus {
+	border-color: var(--pf-primary, #B5654A);
+	background-color: #fff;
+	box-shadow: 0 0 0 3px rgba(181, 101, 74, 0.10);
+}
+
+/* ---- Invalid ---- */
+.pf-form .pf-field input.pf-invalid,
+.pf-form .pf-field select.pf-invalid,
+.pf-form .pf-field textarea.pf-invalid {
+	border-color: #C44545;
+	box-shadow: 0 0 0 3px rgba(196, 69, 69, 0.08);
+}
+
+/* ---- Checkbox / Radio ---- */
+.pf-form .pf-field fieldset {
+	border: none;
+	padding: 0;
+	margin: 0;
+}
+
+.pf-form .pf-inline-option {
+	display: flex;
+	align-items: center;
+	gap: 9px;
+	font-family: 'Montserrat', sans-serif;
+	font-weight: 500;
+	font-size: 13px;
+	margin-bottom: 8px;
+	color: var(--pf-text, #1A1614);
+	cursor: pointer;
+	padding: 0;
+	background: none;
+	border: none;
+}
+
+.pf-form .pf-inline-option:last-child { margin-bottom: 0; }
+
+.pf-form .pf-inline-option input[type="checkbox"],
+.pf-form .pf-inline-option input[type="radio"] {
+	width: 17px;
+	height: 17px;
+	margin: 0;
+	padding: 0;
+	flex-shrink: 0;
+	accent-color: var(--pf-primary, #B5654A);
+	cursor: pointer;
+}
+
+/* ---- File upload ---- */
+.pf-form .pf-field input[type="file"] {
+	display: block;
+	width: 100%;
+	padding: 9px 12px;
+	font-family: 'Montserrat', sans-serif;
+	font-size: 13px;
+	border: 1.5px dashed var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 6px);
+	background: var(--pf-input-bg, #FAF8F6);
+	color: var(--pf-text, #1A1614);
+	cursor: pointer;
+}
+
+/* ---- Hidden ---- */
+.pf-form .pf-field.pf-hidden { display: none; }
+.pf-form .pf-hp { display: none; }
+
+/* ---- HTML block ---- */
+.pf-form .pf-field-html {
+	font-family: 'Montserrat', sans-serif;
+	font-size: 13px;
+	color: var(--pf-text, #6B5F58);
+	line-height: 1.6;
+}
+
+.pf-form .pf-field-hint {
+	font-family: 'Montserrat', sans-serif;
+	font-size: 11px;
+	color: #9C9182;
+	margin: 5px 0 0;
+	letter-spacing: 0.02em;
+}
+
+/* ---- Section divider ---- */
+.pf-form .pf-field-section-divider {
+	padding: 4px 0 8px;
+	border: none;
+	background: none;
+	margin-top: 6px;
+}
+
+.pf-form .pf-divider-title {
+	font-family: 'Montserrat', sans-serif;
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--pf-primary, #B5654A);
+	margin-bottom: 8px;
+}
+
+.pf-form .pf-divider-line {
+	border: none;
+	border-top: 1px solid var(--pf-border, #E8E2DC);
+	margin: 0;
+	height: 0;
+	background: none;
+}
+
+.pf-form .pf-divider-desc {
+	font-family: 'Montserrat', sans-serif;
+	font-size: 12px;
+	color: #9C9182;
+	margin-top: 6px;
+	line-height: 1.5;
+}
+
+/* ---- Image choice ---- */
+.pf-form .pf-field-image-choice fieldset {
+	border: none; padding: 0; margin: 0;
+}
+
+.pf-form .pf-image-choice-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+	gap: 8px;
+}
+
+.pf-form .pf-image-choice-item { cursor: pointer; display: block; }
+
+.pf-form .pf-image-choice-item input {
+	position: absolute; opacity: 0; width: 0; height: 0;
+}
+
+.pf-form .pf-image-choice-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 7px;
+	border: 1.5px solid var(--pf-border, #DDD4C8);
+	border-radius: var(--pf-radius, 6px);
+	background: var(--pf-input-bg, #FAF8F6);
+	text-align: center;
+	transition: border-color 0.15s, box-shadow 0.15s;
+	cursor: pointer;
+}
+
+.pf-form .pf-image-choice-card:hover { border-color: var(--pf-primary, #B5654A); }
+
+.pf-form .pf-image-choice-item input:checked + .pf-image-choice-card {
+	border-color: var(--pf-primary, #B5654A);
+	box-shadow: 0 0 0 2px rgba(181, 101, 74, 0.14);
+	background: #fff;
+}
+
+.pf-form .pf-image-choice-img {
+	display: block; width: 100%; height: 64px;
+	background-size: cover; background-position: center;
+	border-radius: 4px;
+}
+
+.pf-form .pf-image-choice-icon {
+	display: flex; align-items: center; justify-content: center;
+	width: 100%; height: 52px; color: #C9BBA8;
+}
+
+.pf-form .pf-image-choice-label {
+	font-family: 'Montserrat', sans-serif;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--pf-text, #1A1614);
+	line-height: 1.3;
+}
+
+/* ---- Buttons ---- */
+.pf-form .pf-step-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 20px;
+	padding: 0;
+	background: none;
+	border: none;
+}
+
+.pf-form .pf-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 2px solid transparent;
+	border-radius: var(--pf-radius, 6px);
+	padding: 11px 24px;
+	font-family: 'Montserrat', sans-serif;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+	text-decoration: none;
+	line-height: 1;
+}
+
+.pf-form .pf-btn:active { transform: translateY(1px); }
+
+.pf-form .pf-btn-primary {
+	background: var(--pf-btn-bg, var(--pf-primary, #B5654A));
+	color: var(--pf-btn-text, #ffffff);
+	border-color: var(--pf-btn-border, transparent);
+}
+
+.pf-form .pf-btn-primary:hover { opacity: 0.88; }
+
+.pf-form .pf-btn-primary[disabled],
+.pf-form .pf-btn-primary:disabled {
+	opacity: 0.5; cursor: not-allowed;
+}
+
+.pf-form .pf-btn-secondary {
+	background: transparent;
+	color: var(--pf-text, #6B5F58);
+	border-color: var(--pf-border, #DDD4C8);
+}
+
+.pf-form .pf-btn-secondary:hover {
+	border-color: var(--pf-primary, #B5654A);
+	color: var(--pf-primary, #B5654A);
+}
+
+/* ---- Messages ---- */
+.pf-form .pf-message {
+	font-family: 'Montserrat', sans-serif;
+	font-size: 13px;
+	font-weight: 600;
+	padding: 12px 16px;
+	border-radius: var(--pf-radius, 6px);
+	margin-top: 14px;
+	display: none;
+	letter-spacing: 0.02em;
+}
+
+.pf-form .pf-message.is-success {
+	display: block;
+	background: #EBF5EE;
+	color: #1B5E20;
+	border: 1px solid #C8E6C9;
+}
+
+.pf-form .pf-message.is-error {
+	display: block;
+	background: #FCEBEB;
+	color: #B71C1C;
+	border: 1px solid #FFCDD2;
+}
+
+/* Submitted */
+.pf-form.pf-submitted .pf-step-panel,
+.pf-form.pf-submitted .pf-steps-indicator {
+	display: none !important;
+}
+
+/* Elementor override */
+.elementor .pf-form .pf-step-panel { display: none !important; }
+.elementor .pf-form .pf-step-panel.is-active { display: block !important; }
+
 	background: #FFFFFF;
 	border-radius: 8px;
 	padding: 32px;

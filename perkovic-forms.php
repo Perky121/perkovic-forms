@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Perković Forms
  * Description: Custom kontakt forme s drag&drop builderom, multi-step/multi-column prikazom, Smart Logic uvjetima, predlošcima, UTM praćenjem, pipeline upravljanjem upitima i GTM/GA4 integracijom.
- * Version: 1.6.0
+ * Version: 1.6.1
 
  * Text Domain: perkovic-forms
  * Update URI: https://updates.perkovic-forms.com/
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PF_VERSION', '1.6.0' );
+define( 'PF_VERSION', '1.6.1' );
 define( 'PF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'PF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'PF_PLUGIN_FILE', __FILE__ );
@@ -929,6 +929,7 @@ function pf_theme_css( $form_id, $theme ) {
 
 	// Scope na ID forme + wrapper (specifičan selector koji bije Elementor)
 	return "<style id=\"pf-theme-{$form_id}\">\n"
+		. "@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');\n"
 		. $google_font
 		// Wrapper kartica
 		. "{$wrap_sel} {\n"
@@ -1036,12 +1037,14 @@ function pf_theme_css( $form_id, $theme ) {
 		. "{$id_sel} .pf-field input[type='number'],\n"
 		. "{$id_sel} .pf-field select,\n"
 		. "{$id_sel} .pf-field textarea {\n"
-		. "\tborder: 1px solid {$t['border_color']} !important;\n"
+		. "\tborder: 1.5px solid {$t['border_color']} !important;\n"
 		. "\tborder-radius: {$radius} !important;\n"
 		. "\tbackground: {$t['input_bg']} !important;\n"
 		. "\tcolor: {$t['text_color']} !important;\n"
-		. "\tpadding: 13px 14px !important;\n"
-		. "\tfont-size: 15px !important;\n"
+		. "\tpadding: 11px 14px !important;\n"
+		. "\tfont-family: 'Montserrat', sans-serif !important;\n"
+		. "\tfont-size: 14px !important;\n"
+		. "\tfont-weight: 500 !important;\n"
 		. "\twidth: 100% !important;\n"
 		. "\tbox-sizing: border-box !important;\n"
 		. "\t-webkit-appearance: none !important;\n"
@@ -1063,29 +1066,38 @@ function pf_theme_css( $form_id, $theme ) {
 		. "{$id_sel} .pf-field label,\n"
 		. "{$id_sel} .pf-field legend {\n"
 		. "\tcolor: {$t['label_color']} !important;\n"
-		. "\tfont-weight: 600 !important;\n"
-		. "\tfont-size: 15px !important;\n"
+		. "\tfont-family: 'Montserrat', sans-serif !important;\n"
+		. "\tfont-weight: 700 !important;\n"
+		. "\tfont-size: 10px !important;\n"
+		. "\ttext-transform: uppercase !important;\n"
+		. "\tletter-spacing: 0.08em !important;\n"
 		. "\tdisplay: block !important;\n"
-		. "\tmargin-bottom: 7px !important;\n"
+		. "\tmargin-bottom: 6px !important;\n"
 		. "}\n"
 		. "{$id_sel} .pf-btn-primary {\n"
 		. "\tbackground: {$btn_bg} !important;\n"
 		. "\tcolor: {$btn_text} !important;\n"
 		. "\tborder: 2px solid {$btn_border} !important;\n"
 		. "\tborder-radius: {$radius} !important;\n"
-		. "\tpadding: 13px 28px !important;\n"
-		. "\tfont-size: 15px !important;\n"
-		. "\tfont-weight: 600 !important;\n"
+		. "\tpadding: 11px 24px !important;\n"
+		. "\tfont-family: 'Montserrat', sans-serif !important;\n"
+		. "\tfont-size: 13px !important;\n"
+		. "\tfont-weight: 700 !important;\n"
+		. "\tletter-spacing: 0.04em !important;\n"
+		. "\ttext-transform: uppercase !important;\n"
 		. "\tcursor: pointer !important;\n"
 		. "}\n"
 		. "{$id_sel} .pf-btn-secondary {\n"
 		. "\tborder-radius: {$radius} !important;\n"
 		. "\tborder: 2px solid {$t['border_color']} !important;\n"
 		. "\tbackground: transparent !important;\n"
-		. "\tcolor: {$t['primary_color']} !important;\n"
-		. "\tpadding: 13px 28px !important;\n"
-		. "\tfont-size: 15px !important;\n"
-		. "\tfont-weight: 600 !important;\n"
+		. "\tcolor: {$t['text_color']} !important;\n"
+		. "\tpadding: 11px 24px !important;\n"
+		. "\tfont-family: 'Montserrat', sans-serif !important;\n"
+		. "\tfont-size: 13px !important;\n"
+		. "\tfont-weight: 700 !important;\n"
+		. "\tletter-spacing: 0.04em !important;\n"
+		. "\ttext-transform: uppercase !important;\n"
 		. "\tcursor: pointer !important;\n"
 		. "}\n"
 		. "{$id_sel} .pf-step-dot.is-active,\n"
