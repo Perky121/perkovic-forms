@@ -6,6 +6,11 @@ jQuery(function ($) {
 		return;
 	}
 
+	// ODMAH premjesti modale na <body> i sakrij ih (izbjegava prikaz na dnu stranice)
+	$('#pf-preview-modal, #pf-template-modal').each(function () {
+		$(this).appendTo('body').removeClass('is-open').css('display', 'none');
+	});
+
 	var pfSteps       = [];
 	var fieldsByUid   = {};
 	var selectedUid   = null;
@@ -1131,7 +1136,7 @@ jQuery(function ($) {
 	$('#pf-load-template-btn').on('click', function () {
 		loadTemplates(function () {
 			renderTemplateModal();
-			$('#pf-template-modal').addClass('is-open').css('display', 'flex');
+			$('#pf-template-modal').css('display', '').addClass('is-open');
 		});
 	});
 
@@ -1228,7 +1233,7 @@ jQuery(function ($) {
 			$modal.appendTo('body');
 		}
 		$('#pf-preview-frame').html(buildPreviewHTML());
-		$modal.addClass('is-open').css('display', 'flex');
+		$modal.css('display', '').addClass('is-open');
 		evaluatePreviewConditions($('#pf-preview-frame')[0]);
 	});
 
@@ -1288,12 +1293,12 @@ jQuery(function ($) {
 	}
 
 	$('#pf-preview-close').on('click', function () {
-		$('#pf-preview-modal').removeClass('is-open').css('display', 'none');
+		$('#pf-preview-modal').removeClass('is-open');
 	});
 
 	$(document).on('click', '#pf-preview-modal', function (e) {
 		if (e.target === this) {
-			$(this).removeClass('is-open').css('display', 'none');
+			$(this).removeClass('is-open');
 		}
 	});
 

@@ -1404,7 +1404,7 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
    ============================================================ */
 
 .pf-preview-modal {
-	display: none;
+	display: none !important;
 	position: fixed;
 	inset: 0;
 	background: rgba(43, 36, 32, 0.5);
@@ -1413,7 +1413,7 @@ textarea.pf-sinput { resize: vertical; min-height: 120px; }
 	justify-content: center;
 }
 
-.pf-preview-modal.is-open { display: flex; }
+.pf-preview-modal.is-open { display: flex !important; }
 
 .pf-preview-modal-inner {
 	background: #F4EEE4;
